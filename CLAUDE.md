@@ -331,7 +331,50 @@ frontend/src/
 
 ---
 
-## 十七、最终项目目标
+## 十八、Git 分支与开发流程
+
+> 个人项目，简化分支策略，直接在 main 分支开发。
+
+### 分支模型
+
+```
+main        ← 直接开发，每次 push 触发 CI 检查
+feature/*   ← 可选：复杂功能开发时拉分支，完成后合回 main
+```
+
+- 日常开发直接 push 到 `main`
+- 复杂功能或实验性改动可拉 `feature/*` 分支，完成后合回 main
+- commit message 格式：`[模块名] 功能描述`，如 `[auth] 添加 JWT 登录接口`
+
+---
+
+## 十九、CI/CD 流水线
+
+> GitHub Actions 自动化，push 即触发，保证代码质量。
+
+### 流水线设计
+
+| Workflow | 触发条件 | 内容 |
+|----------|----------|------|
+| `ci-backend.yml` | push 涉及 `backend/` | Ruff Lint + Black + MyPy + pytest |
+| `ci-frontend.yml` | push 涉及 `frontend/` | ESLint + TypeScript + Build Check |
+| `build.yml` | push to main | Docker 构建验证（不推送） |
+| `deploy.yml` | push to main（可选） | Docker 构建推送 + SSH 部署 |
+
+### GitHub Secrets（部署时配置）
+
+| Secret | 说明 |
+|--------|------|
+| `DOCKER_USERNAME` | Docker Hub 用户名 |
+| `DOCKER_PASSWORD` | Docker Hub 密码 |
+| `DEPLOY_HOST` | 部署服务器 IP |
+| `DEPLOY_USER` | SSH 用户名 |
+| `DEPLOY_KEY` | SSH 私钥 |
+| `DEPLOY_PATH` | 项目部署路径 |
+
+---
+
+## 二十、最终项目目标
 
 打造一套 **可演示、可部署、可深度面试讲解** 的企业级 SaaS 智能客服 AI 平台。
 

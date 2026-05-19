@@ -1,0 +1,48 @@
+name: CI Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci-backend.yml'
+
+jobs:
+  lint-and-test:
+    name: Lint + Type Check + Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        uses: abatilo/action-poetry@v4
+        with:
+          poetry-version: '2.1.3'
+
+      - name: Install dependencies
+        run: poetry install --with dev
+
+      - name: Ruff Lint
+        run: poetry run ruff check app/ tests/
+
+      - name: Black Format Check
+        run: poetry run black --check app/ tests/
+
+      - name: MyPy Type Check
+        run: poetry run mypy app/ --ignore-missing-imports
+        continue-on-error: true  # 初期允许类型检查不完全通过
+
+      - name: Run Tests
+        run: poetry run pytest tests/ -v --tb=short
+        env:
+          PYTHONPATH: app
