@@ -4,11 +4,14 @@ on:
   push:
     branches: [main]
 
+# 现阶段暂不启用自动部署，等有服务器后取消注释 workflow_dispatch 触发器
+# 也可改为手动触发：on: workflow_dispatch
+
 jobs:
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: false  # 暂时禁用，等配置好服务器后改为 github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout
