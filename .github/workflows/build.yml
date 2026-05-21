@@ -1,4 +1,4 @@
-name: Docker Build Check
+name: Container Build Check
 
 on:
   push:

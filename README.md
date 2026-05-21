@@ -14,7 +14,7 @@
 - 📋 复杂问题自动转人工工单
 - 📝 全链路审计日志 & 行为溯源
 - 🖥️ 前端管理后台仪表盘
-- 🐳 Docker Compose 一键本地部署
+- 🐳 Podman Compose 一键本地部署
 
 ---
 
@@ -35,7 +35,7 @@
 | **后端** | FastAPI · PostgreSQL · Redis · Qdrant · Celery · Alembic |
 | **智能体** | LangGraph · OpenAI 系列模型 |
 | **评估** | Ragas |
-| **部署** | Docker Compose |
+| **部署** | Podman Compose |
 
 ---
 
@@ -48,7 +48,7 @@ SupportForge/
 ├── docs/                # 项目文档 & 接口文档
 ├── deploy/              # 部署配置
 ├── scripts/             # 自动化脚本
-├── docker-compose.yml   # 一键部署
+├── compose.yml            # 一键部署（Podman Compose）
 ├── CLAUDE.md            # 开发规范
 └── README.md            # 项目说明
 ```
@@ -125,7 +125,7 @@ npm run dev
 ### 全栈一键部署
 
 ```bash
-docker compose up -d
+podman compose up -d
 ```
 
 ---

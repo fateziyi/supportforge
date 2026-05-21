@@ -1,5 +1,5 @@
 # SupportForge 全栈本地部署配置
-# 使用方式：docker compose up -d
+# 使用方式：podman compose up -d
 
 services:
   # ── 后端 API ──

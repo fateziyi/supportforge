@@ -78,7 +78,7 @@ curl http://localhost:8000/api/v1/nonexist
 ### 验证标准
 
 ```bash
-# docker compose up postgres -d  先启动数据库
+# podman compose up postgres -d  先启动数据库
 cd backend && poetry run alembic upgrade head
 # 数据库中能看到 alembic_version 表
 ```
@@ -160,16 +160,16 @@ curl -X POST http://localhost:8000/api/v1/auth/login -d '{"email":"admin@acme.co
 
 ---
 
-## Day 7：集成验证 + CI 跑通 + Docker Compose 全栈启动
+## Day 7：集成验证 + CI 跑通 + Podman Compose 全栈启动
 
-**目标**：全部服务能通过 Docker Compose 一键启动，CI Backend 流水线跑通。
+**目标**：全部服务能通过 Podman Compose 一键启动，CI Backend 流水线跑通。
 
 ### 任务清单
 
 | # | 任务 | 产出文件 |
 |---|------|----------|
 | 1 | 验证后端本地启动 + 数据库连接 + API 访问 | 手动验证 |
-| 2 | 验证 `docker compose up -d` 全栈能跑 | 手动验证 |
+| 2 | 验证 `podman compose up -d` 全栈能跑 | 手动验证 |
 | 3 | 运行 `poetry run ruff check` + `poetry run black --check` 确保 lint 通过 | 手动验证 |
 | 4 | 修复 CI 可能报的问题（lint / import 顺序等） | 按需修复 |
 | 5 | push 到 GitHub，确认 CI Backend workflow 通过 | 手动验证 |
@@ -180,13 +180,13 @@ curl -X POST http://localhost:8000/api/v1/auth/login -d '{"email":"admin@acme.co
 
 ```bash
 # 全栈启动
-docker compose up -d
+podman compose up -d
 # 后端 API 可访问
 curl http://localhost:8000/docs
 # 前端页面可访问
 curl http://localhost:3000
 # PostgreSQL 有 9 张表 + 默认数据
-docker compose exec postgres psql -U supportforge -c "\dt"
+podman compose exec postgres psql -U supportforge -c "\dt"
 # GitHub Actions CI Backend ✅ 通过
 ```
 
@@ -199,7 +199,7 @@ docker compose exec postgres psql -U supportforge -c "\dt"
 | 任务 | 产出文件 | 状态 |
 |------|----------|------|
 | 初始化前端 Next.js + TS + Tailwind + shadcn/ui | `frontend/` 全套 | ✅ 已完成 |
-| 配置 Docker Compose | `docker-compose.yml` | ✅ 已完成 |
+| 配置 Podman Compose | `compose.yml` | ✅ 已完成 |
 | 配置 `.env` 模板 | `backend/.env.example` | ✅ 已完成 |
 | 创建 Agent Prompt 文件 | `backend/app/agent/prompts/*.md` | ✅ 已完成 |
 | 配置 CI/CD 流水线 | `.github/workflows/*.yml` | ✅ 已完成 |
@@ -235,6 +235,6 @@ backend/app/
 └── 其他目录 __init__.py  ✅ 空占位
 
 PostgreSQL: 9 张表 + 索引 + 默认租户和管理员账号
-Docker Compose: 全栈可一键启动
+Podman Compose: 全栈可一键启动
 CI/CD: CI Backend workflow ✅ 通过
 ```

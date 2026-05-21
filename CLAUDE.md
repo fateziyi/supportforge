@@ -51,7 +51,7 @@
 
 ### 部署
 
-- 本地一键部署：Docker Compose
+- 本地一键部署：Podman Compose
 
 ---
 
@@ -103,7 +103,7 @@ SupportForge/
 ├── deploy/             # 部署配置、docker 脚本
 ├── scripts/            # 自动化脚本
 ├── docs/               # 项目文档、接口文档
-├── docker-compose.yml  # 一键部署配置
+├── compose.yml           # 一键部署配置（Podman Compose）
 ├── CLAUDE.md           # 开发规范文档
 └── README.md           # 项目说明
 ```
@@ -314,7 +314,7 @@ frontend/src/
 | Phase 7 | 全流程审计日志 |
 | Phase 8 | 前端管理后台页面开发 |
 | Phase 9 | 单元测试、接口联调 |
-| Phase 10 | Docker 本地部署脚本 |
+| Phase 10 | Podman Compose 本地部署脚本 |
 
 ---
 
@@ -359,15 +359,15 @@ feature/*   ← 可选：复杂功能开发时拉分支，完成后合回 main
 |----------|----------|------|
 | `ci-backend.yml` | push 涉及 `backend/` | Ruff Lint + Black + MyPy + pytest |
 | `ci-frontend.yml` | push 涉及 `frontend/` | ESLint + TypeScript + Build Check |
-| `build.yml` | push to main | Docker 构建验证（不推送） |
-| `deploy.yml` | push to main（可选） | Docker 构建推送 + SSH 部署 |
+| `build.yml` | push to main | 容器构建验证（不推送） |
+| `deploy.yml` | push to main（可选） | 容器构建推送 + SSH 部署 |
 
 ### GitHub Secrets（部署时配置）
 
 | Secret | 说明 |
 |--------|------|
-| `DOCKER_USERNAME` | Docker Hub 用户名 |
-| `DOCKER_PASSWORD` | Docker Hub 密码 |
+| `DOCKER_USERNAME` | 容器镜像仓库用户名 |
+| `DOCKER_PASSWORD` | 容器镜像仓库密码 |
 | `DEPLOY_HOST` | 部署服务器 IP |
 | `DEPLOY_USER` | SSH 用户名 |
 | `DEPLOY_KEY` | SSH 私钥 |
