@@ -140,9 +140,3 @@ docker compose up -d
 - ✅ AI Agent 工作流成熟度
 
 详细开发规范请参见 [CLAUDE.md](./CLAUDE.md)。
-
----
-
-## 📄 License
-
-MIT License
