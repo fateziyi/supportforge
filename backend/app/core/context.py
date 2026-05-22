@@ -59,6 +59,7 @@ tenant_id_ctx: ContextVar[Optional[str]] = ContextVar("tenant_id", default=None)
 # 提供 getter/setter，不直接操作底层 ContextVar
 # 这样如果以后需要加日志或校验，只需要改这些函数即可
 
+
 def set_request_id(request_id: Optional[str] = None) -> str:
     """
     设置当前请求的 request_id

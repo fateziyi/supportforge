@@ -61,9 +61,13 @@ class Settings(BaseSettings):
     # ── 数据库配置（Day 3 使用）──
     # database_url: PostgreSQL 异步连接字符串
     # 格式：postgresql+asyncpg://用户名:密码@主机:端口/数据库名
-    database_url: str = "postgresql+asyncpg://supportforge:supportforge_dev@localhost:5432/supportforge"
+    database_url: str = (
+        "postgresql+asyncpg://supportforge:supportforge_dev@localhost:5432/supportforge"
+    )
     # database_url_sync: PostgreSQL 同步连接字符串（Alembic 迁移用）
-    database_url_sync: str = "postgresql://supportforge:supportforge_dev@localhost:5432/supportforge"
+    database_url_sync: str = (
+        "postgresql://supportforge:supportforge_dev@localhost:5432/supportforge"
+    )
 
     # ── Redis 配置（Week 5 Celery 使用）──
     redis_url: str = "redis://localhost:6379/0"

@@ -29,6 +29,7 @@ from .context import clear_context, set_request_id
 
 # ── 日志初始化 ──
 
+
 def setup_logging(log_level: str = "INFO") -> None:
     """
     初始化项目日志系统
@@ -73,6 +74,7 @@ def setup_logging(log_level: str = "INFO") -> None:
 
 
 # ── 请求日志中间件 ──
+
 
 class RequestLogMiddleware(BaseHTTPMiddleware):
     """
@@ -141,6 +143,7 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
             )
             # 仍然返回一个默认的 500 响应
             from starlette.responses import JSONResponse
+
             response = JSONResponse(
                 status_code=500,
                 content={

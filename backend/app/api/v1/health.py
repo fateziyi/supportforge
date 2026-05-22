@@ -35,6 +35,6 @@ async def health_check() -> dict[str, str]:
         dict: 包含 status 和 service 字段的简单字典
     """
     return {
-        "status": "ok",          # 服务运行正常
+        "status": "ok",  # 服务运行正常
         "service": "supportforge-backend",  # 服务名称标识
     }

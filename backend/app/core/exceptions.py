@@ -35,6 +35,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # ── 自定义异常基类 ──
 
+
 class AppException(Exception):
     """
     项目自定义异常基类
@@ -84,6 +85,7 @@ class BusinessException(AppException):
 
     HTTP 状态码：400
     """
+
     code: int = 40000
     message: str = "业务异常"
     status_code: int = 400
@@ -97,6 +99,7 @@ class UnauthorizedException(AppException):
 
     HTTP 状态码：401
     """
+
     code: int = 40100
     message: str = "未登录或凭证无效"
     status_code: int = 401
@@ -111,6 +114,7 @@ class ForbiddenException(AppException):
 
     HTTP 状态码：403
     """
+
     code: int = 40300
     message: str = "权限不足"
     status_code: int = 403
@@ -125,6 +129,7 @@ class NotFoundException(AppException):
 
     HTTP 状态码：404
     """
+
     code: int = 40400
     message: str = "资源不存在"
     status_code: int = 404
@@ -134,6 +139,7 @@ class NotFoundException(AppException):
 # 所有错误返回都遵循这个结构，和 API 通用约定的成功返回结构对齐
 # 成功：{"code": 0, "message": "success", "data": {...}}
 # 失败：{"code": 40001, "message": "资源不存在", "data": null}
+
 
 def _error_response(
     code: int,
@@ -167,6 +173,7 @@ def _error_response(
 
 
 # ── 全局异常处理器 ──
+
 
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
     """
@@ -213,7 +220,7 @@ async def http_exception_handler(
     """
     return _error_response(
         code=exc.status_code * 100,  # 把 HTTP 状态码转成业务码：404 → 40400
-        message=str(exc.detail),     # exc.detail 是错误描述
+        message=str(exc.detail),  # exc.detail 是错误描述
     )
 
 
@@ -239,6 +246,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
     # 开发阶段：打印完整堆栈到终端日志，方便排查
     # production 环境应该只记录到日志文件，不打印到终端
     import traceback
+
     traceback.print_exc()
 
     return _error_response(
@@ -249,6 +257,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 
 # ── 注册函数 ──
 # 在 main.py 中调用 register_exception_handlers(app) 即可生效
+
 
 def register_exception_handlers(app: FastAPI) -> None:
     """
@@ -263,10 +272,10 @@ def register_exception_handlers(app: FastAPI) -> None:
     """
     # 注册 Starlette 的 HTTPException（覆盖路由 404 等场景）
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)  # type: ignore[arg-type]
-    app.add_exception_handler(FastAPIHTTPException, http_exception_handler)    # type: ignore[arg-type]
-    app.add_exception_handler(AppException, app_exception_handler)             # type: ignore[arg-type]
+    app.add_exception_handler(FastAPIHTTPException, http_exception_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(AppException, app_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[arg-type]
-    app.add_exception_handler(Exception, generic_exception_handler)            # type: ignore[arg-type]
+    app.add_exception_handler(Exception, generic_exception_handler)  # type: ignore[arg-type]
 
 
 async def validation_exception_handler(

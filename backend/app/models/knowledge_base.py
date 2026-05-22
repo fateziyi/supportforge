@@ -54,9 +54,7 @@ class KnowledgeBase(Base, TimestampMixin):
     """
 
     __tablename__ = "knowledge_bases"
-    __table_args__ = (
-        UniqueConstraint("tenant_id", "name", name="uq_kb_tenant_name"),
-    )
+    __table_args__ = (UniqueConstraint("tenant_id", "name", name="uq_kb_tenant_name"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     tenant_id: Mapped[str] = mapped_column(

@@ -68,10 +68,10 @@ async def lifespan(app: FastAPI):
     # ── startup 阶段 ──
     # 获取日志实例，记录启动信息
     import logging
+
     logger = logging.getLogger("app")
     logger.info(
-        f"SupportForge 启动 | env={settings.app_env} |"
-        f" port={settings.app_port}"
+        f"SupportForge 启动 | env={settings.app_env} |" f" port={settings.app_port}"
     )
 
     # yield 把控制权交给 FastAPI，开始处理请求

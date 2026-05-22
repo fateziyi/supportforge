@@ -42,6 +42,7 @@ class Base(DeclarativeBase):
     - 有些表用 UUID 主键，有些用自增 ID，统一在基类上定义会限制灵活性
     - 主键策略留给每个模型自己决定，基类只提供"识别为 ORM 模型"的能力
     """
+
     pass
 
 
@@ -77,6 +78,7 @@ class TimestampMixin:
     - DateTime(timezone=True) → 使用带时区的时间类型（timestamptz in PostgreSQL）
     - 这样可以避免时区混乱问题，所有时间都以 UTC 存储，前端按用户时区展示
     """
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
