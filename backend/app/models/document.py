@@ -27,7 +27,8 @@
   - 例如 "/uploads/acme/kb1/产品手册.pdf"
   - Week 3 会用本地文件系统或对象存储来管理实际文件
 - mime_type: 文件的 MIME 类型
-  - 例如 "application/pdf"、"text/plain"、"application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  - 例如 "application/pdf"、"text/plain"、
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   - Day 4 必加这个字段，Week 3 文档解析需根据文件类型决定解析策略
   - PDF、Word、Excel、TXT 等不同类型需要不同的解析器
 - status: 文档处理状态

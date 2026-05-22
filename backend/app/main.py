@@ -28,12 +28,12 @@ from fastapi import FastAPI
 from .api.v1.router import api_router
 
 # ── 导入 Day 2 新增的核心模块 ──
-from .core.config import settings              # 配置管理（Day 2）
-from .core.logging import setup_logging, RequestLogMiddleware  # 日志（Day 2）
-from .core.exceptions import register_exception_handlers      # 异常处理（Day 2）
+from .core.config import settings  # 配置管理（Day 2）
+from .core.exceptions import register_exception_handlers  # 异常处理（Day 2）
+from .core.logging import RequestLogMiddleware, setup_logging  # 日志（Day 2）
 
 # ── 导入 Day 3 新增的数据库模块 ──
-from .db.session import engine                 # 数据库引擎（Day 3）
+from .db.session import engine  # 数据库引擎（Day 3）
 
 
 # ── 定义应用生命周期管理 ──
@@ -69,7 +69,10 @@ async def lifespan(app: FastAPI):
     # 获取日志实例，记录启动信息
     import logging
     logger = logging.getLogger("app")
-    logger.info(f"SupportForge 启动 | env={settings.app_env} | port={settings.app_port}")
+    logger.info(
+        f"SupportForge 启动 | env={settings.app_env} |"
+        f" port={settings.app_port}"
+    )
 
     # yield 把控制权交给 FastAPI，开始处理请求
     yield

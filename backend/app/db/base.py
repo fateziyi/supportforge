@@ -51,7 +51,8 @@ class TimestampMixin:
 
     提供两个所有业务表都需要的时间字段：
     - created_at: 记录创建时间，数据库侧默认值 func.now()
-    - updated_at: 记录最后修改时间，数据库侧默认值 func.now()，SQLAlchemy 在 UPDATE 时自动刷新
+    - updated_at: 记录最后修改时间，数据库侧默认值 func.now()，
+      SQLAlchemy 在 UPDATE 时自动刷新
 
     为什么用 Mixin 而不是直接放在 Base 上？
     - 有些表可能不需要时间戳（比如纯关联表、配置表）

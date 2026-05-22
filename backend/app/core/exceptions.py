@@ -28,10 +28,10 @@
 """
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import HTTPException as FastAPIHTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import HTTPException as FastAPIHTTPException, RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-
 
 # ── 自定义异常基类 ──
 
@@ -135,7 +135,12 @@ class NotFoundException(AppException):
 # 成功：{"code": 0, "message": "success", "data": {...}}
 # 失败：{"code": 40001, "message": "资源不存在", "data": null}
 
-def _error_response(code: int, message: str, data: object = None, status_code: int = 0) -> JSONResponse:
+def _error_response(
+    code: int,
+    message: str,
+    data: object = None,
+    status_code: int = 0,
+) -> JSONResponse:
     """
     生成统一错误响应
 
@@ -183,7 +188,10 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
     )
 
 
-async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+async def http_exception_handler(
+    request: Request,
+    exc: StarletteHTTPException,
+) -> JSONResponse:
     """
     处理 Starlette/FastAPI 内置的 HTTPException
 

@@ -34,10 +34,9 @@
 - "为什么不用全局变量？" → 全局变量会被多个请求共享，ContextVar 每个请求独立
 """
 
+import uuid
 from contextvars import ContextVar
 from typing import Optional
-import uuid
-
 
 # ── 定义三个上下文变量 ──
 # ContextVar 的第一个参数是名称，default 是默认值（请求开始前为 None）

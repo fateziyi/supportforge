@@ -32,6 +32,16 @@ package-mode = false
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.ruff]
+src = ["app"]
+exclude = [
+    "app/db/migrations/versions",
+    "app/db/migrations/env.py",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
 [dependency-groups]
 dev = [
     "pytest (>=9.0.3,<10.0.0)",

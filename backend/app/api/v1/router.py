@@ -15,7 +15,9 @@ v1 版本路由聚合器
   main.py → include_router(api_router, prefix="/api/v1")
     api_router → include_router(health_router, tags=["health"])
     api_router → include_router(auth_router, prefix="/auth", tags=["auth"])  ← Week 2
-    api_router → include_router(tenants_router, prefix="/tenants", tags=["tenants"])  ← Week 2
+    api_router → include_router(
+        tenants_router, prefix="/tenants", tags=["tenants"]
+    )  ← Week 2
     ...
 
 最终用户访问的 URL：
@@ -44,8 +46,14 @@ api_router.include_router(health_router, tags=["health"])
 # api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
 # api_router.include_router(tenants_router, prefix="/tenants", tags=["tenants"])
 # api_router.include_router(users_router, prefix="/users", tags=["users"])
-# api_router.include_router(knowledge_bases_router, prefix="/knowledge-bases", tags=["knowledge-bases"])
+# api_router.include_router(
+#     knowledge_bases_router, prefix="/knowledge-bases", tags=["knowledge-bases"]
+# )
 # api_router.include_router(documents_router, prefix="/documents", tags=["documents"])
-# api_router.include_router(conversations_router, prefix="/conversations", tags=["conversations"])
+# api_router.include_router(
+#     conversations_router, prefix="/conversations", tags=["conversations"]
+# )
 # api_router.include_router(tickets_router, prefix="/tickets", tags=["tickets"])
-# api_router.include_router(audit_logs_router, prefix="/audit-logs", tags=["audit-logs"])
+# api_router.include_router(
+#     audit_logs_router, prefix="/audit-logs", tags=["audit-logs"]
+# )

@@ -23,7 +23,7 @@ ORM 模型包 — 全部模型的导入入口
 - 否则 Alembic autogenerate 不会发现新表，迁移脚本会遗漏建表操作
 """
 
+from .document import Document as Document
+from .knowledge_base import KnowledgeBase as KnowledgeBase
 from .tenant import Tenant as Tenant
 from .user import User as User
-from .knowledge_base import KnowledgeBase as KnowledgeBase
-from .document import Document as Document

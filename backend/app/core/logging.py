@@ -25,8 +25,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from .context import set_request_id, clear_context
-
+from .context import clear_context, set_request_id
 
 # ── 日志初始化 ──
 
@@ -144,7 +143,11 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
             from starlette.responses import JSONResponse
             response = JSONResponse(
                 status_code=500,
-                content={"code": 50000, "message": "Internal Server Error", "data": None},
+                content={
+                    "code": 50000,
+                    "message": "Internal Server Error",
+                    "data": None,
+                },
             )
 
         # 4. 计算请求耗时

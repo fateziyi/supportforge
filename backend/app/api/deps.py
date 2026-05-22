@@ -34,7 +34,9 @@ Week 2 阶段：get_current_user() 将实现 JWT 认证逻辑
 # 从 db/session.py 导入真实的 get_db 函数
 # 不在 deps.py 里重复创建 engine/sessionmaker，保持单一事实来源
 # 这样 db/session.py 是数据库基础设施的唯一定义处，deps.py 只做转发
-from ..db.session import get_db  # noqa: F401 — 路由层通过 Depends(get_db) 使用，不在本文件内直接调用
+from ..db.session import (
+    get_db,  # noqa: F401 — 路由层通过 Depends(get_db) 使用，不在本文件内直接调用
+)
 
 
 async def get_current_user():

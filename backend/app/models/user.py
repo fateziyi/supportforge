@@ -78,7 +78,8 @@ class User(Base, TimestampMixin):
     username: Mapped[str] = mapped_column(String(50), nullable=False)
     email: Mapped[str] = mapped_column(String(120), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    # role 可选值与 CLAUDE.md §7 一致：platform_admin / tenant_admin / support_agent / auditor
+    # role 与 CLAUDE.md §7 一致：
+    # platform_admin / tenant_admin / support_agent / auditor
     role: Mapped[str] = mapped_column(String(30), nullable=False)
     status: Mapped[str] = mapped_column(
         String(20),

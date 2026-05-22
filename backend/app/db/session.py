@@ -47,7 +47,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from ..core.config import settings
 
-
 # ── 创建异步数据库引擎 ──
 # create_async_engine 是 SQLAlchemy 提供的异步引擎创建函数
 # 第一个参数是数据库连接 URL，从 settings 中读取（.env 文件配置）
