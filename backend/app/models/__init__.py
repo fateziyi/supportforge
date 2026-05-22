@@ -16,14 +16,23 @@ ORM 模型包 — 全部模型的导入入口
 - User 依赖 Tenant（外键 tenant_id）
 - KnowledgeBase 依赖 Tenant（外键 tenant_id）
 - Document 依赖 Tenant 和 KnowledgeBase（两个外键）
-- Day 5 新增的模型将继续在这里补充
+- Conversation 依赖 Tenant 和 User
+- ConversationMessage 依赖 Tenant 和 Conversation
+- Ticket 依赖 Tenant、Conversation 和 User
+- AuditLog 依赖 Tenant 和 User
+- AgentRun 依赖 Tenant、Conversation 和 ConversationMessage
 
 ⚠️ 注意：
 - 每次新增模型文件后，必须在这里补上导入
 - 否则 Alembic autogenerate 不会发现新表，迁移脚本会遗漏建表操作
 """
 
+from .agent_run import AgentRun as AgentRun
+from .audit_log import AuditLog as AuditLog
+from .conversation import Conversation as Conversation
+from .conversation_message import ConversationMessage as ConversationMessage
 from .document import Document as Document
 from .knowledge_base import KnowledgeBase as KnowledgeBase
 from .tenant import Tenant as Tenant
+from .ticket import Ticket as Ticket
 from .user import User as User

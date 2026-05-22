@@ -586,3 +586,278 @@ Day 5 推荐按这个顺序实现：
 - 先把核心对话链路搭起来（conversation → message）
 - 再补工单和审计两个业务侧结构
 - 最后补 Agent 执行记录，避免前置依赖不完整导致关系混乱
+
+---
+
+## 12. 全量 9 张核心业务表总览
+
+Day 4 + Day 5 完成后，数据库中共有 9 张核心业务表 + 1 张 Alembic 版本管理表（`alembic_version`），合计 10 张表。以下从业务视角逐表介绍。
+
+### 12.1 表总览
+
+| # | 表名 | 所属 Day | 所属模块 | 核心职责 | 多租户字段 |
+|---|------|----------|----------|----------|-----------|
+| 1 | `tenants` | Day 4 | models/tenant.py | 多租户 SaaS 的顶层实体，所有业务数据的租户归属根节点 | 不需要（自己就是租户表） |
+| 2 | `users` | Day 4 | models/user.py | 用户与 RBAC 角色的载体，支撑登录认证和权限校验 | `tenant_id` ✅ |
+| 3 | `knowledge_bases` | Day 4 | models/knowledge_base.py | 知识库容器，文档归属与 RAG 检索的逻辑边界 | `tenant_id` ✅ |
+| 4 | `documents` | Day 4 | models/document.py | 文档上传、解析、切片、向量入库的持久化基础 | `tenant_id` ✅ |
+| 5 | `conversations` | Day 5 | models/conversation.py | 对话会话容器，一轮客户咨询的上下文载体 | `tenant_id` ✅ |
+| 6 | `conversation_messages` | Day 5 | models/conversation_message.py | 对话消息明细，逐条保存用户/AI/客服/系统消息 | `tenant_id` ✅ |
+| 7 | `tickets` | Day 5 | models/ticket.py | 工单流转基础，承接 AI 无法闭环的复杂问题 | `tenant_id` ✅ |
+| 8 | `audit_logs` | Day 5 | models/audit_log.py | 审计日志，记录关键业务操作和 AI 决策行为 | `tenant_id` ✅ |
+| 9 | `agent_runs` | Day 5 | models/agent_run.py | Agent 执行记录，保存每次 LangGraph 工作流运行的输入/输出/状态 | `tenant_id` ✅ |
+| 10 | `alembic_version` | Day 3 | Alembic 自动创建 | 数据库迁移版本管理，记录当前迁移版本号 | 不涉及 |
+
+### 12.2 逐表详解
+
+#### 1. `tenants` — 租户表
+
+多租户 SaaS 系统的顶层实体。每个租户代表一个独立的组织/公司，所有业务数据都归属于某个 tenant。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `String(36)` | 租户唯一标识 |
+| `name` | `String(100)` | 租户名称（全局唯一） |
+| `status` | `String(20)` | 租户状态：`active` / `disabled` |
+| `created_at` | `DateTime(timezone=True)` | 创建时间 |
+| `updated_at` | `DateTime(timezone=True)` | 最后修改时间 |
+
+#### 2. `users` — 用户表
+
+用户是登录认证与 RBAC 权限的载体。每个用户归属于一个租户，角色决定了可操作范围。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `String(36)` | 用户唯一标识 |
+| `tenant_id` | `String(36)` → `tenants.id` | 所属租户 |
+| `username` | `String(50)` | 用户名（租户内唯一） |
+| `email` | `String(120)` | 登录邮箱（租户内唯一） |
+| `password_hash` | `String(255)` | 加密后的密码（绝不存明文） |
+| `role` | `String(30)` | 角色：`platform_admin` / `tenant_admin` / `support_agent` / `auditor` |
+| `status` | `String(20)` | 用户状态：`active` / `disabled` |
+| `created_at` | `DateTime(timezone=True)` | 创建时间 |
+| `updated_at` | `DateTime(timezone=True)` | 最后修改时间 |
+
+**联合唯一约束**：`(tenant_id, email)` + `(tenant_id, username)` — 保证同一租户内邮箱和用户名不重复。
+
+#### 3. `knowledge_bases` — 知识库表
+
+知识库是文档归属与 RAG 检索的逻辑容器。一个租户可以创建多个知识库（如产品手册、FAQ、内部规程）。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `String(36)` | 知识库唯一标识 |
+| `tenant_id` | `String(36)` → `tenants.id` | 所属租户 |
+| `name` | `String(100)` | 知识库名称（租户内唯一） |
+| `description` | `String(500)` 或 `None` | 知识库描述 |
+| `status` | `String(20)` | 状态：`active` / `archived` |
+| `created_at` | `DateTime(timezone=True)` | 创建时间 |
+| `updated_at` | `DateTime(timezone=True)` | 最后修改时间 |
+
+**联合唯一约束**：`(tenant_id, name)` — 同一租户内不能创建同名知识库。
+
+#### 4. `documents` — 文档表
+
+文档是 RAG 流程的起点：上传 → 解析 → 切片 → 向量化 → 入库。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `String(36)` | 文档唯一标识 |
+| `tenant_id` | `String(36)` → `tenants.id` | 所属租户 |
+| `knowledge_base_id` | `String(36)` → `knowledge_bases.id` | 所属知识库 |
+| `filename` | `String(255)` | 原始文件名 |
+| `file_path` | `String(500)` | 文件存储路径 |
+| `mime_type` | `String(100)` | 文件 MIME 类型（决定解析策略） |
+| `status` | `String(30)` | 状态：`uploaded` / `parsing` / `ready` / `failed` |
+| `created_at` | `DateTime(timezone=True)` | 创建时间 |
+| `updated_at` | `DateTime(timezone=True)` | 最后修改时间 |
+
+#### 5. `conversations` — 对话主表
+
+对话是客户咨询的会话容器。一轮对话包含多条消息，可能触发 Agent 回答、转工单、人工接管。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `String(36)` | 对话唯一标识 |
+| `tenant_id` | `String(36)` → `tenants.id` | 所属租户 |
+| `user_id` | `String(36)` → `users.id` | 发起对话的用户 |
+| `status` | `String(20)` | 状态：`open` / `closed` / `handoff` |
+| `last_message_at` | `DateTime(timezone=True)` 或 `None` | 最后一条消息时间 |
+| `created_at` | `DateTime(timezone=True)` | 创建时间 |
+| `updated_at` | `DateTime(timezone=True)` | 最后修改时间 |
+
+#### 6. `conversation_messages` — 对话消息明细表
+
+逐条保存对话中的每条消息，包括用户输入、AI 回复、客服回复、系统事件。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `String(36)` | 消息唯一标识 |
+| `tenant_id` | `String(36)` → `tenants.id` | 所属租户 |
+| `conversation_id` | `String(36)` → `conversations.id` | 所属对话 |
+| `sender_type` | `String(20)` | 发送者类型：`user` / `agent` / `human_agent` / `system` |
+| `sender_id` | `String(36)` 或 `None` | 发送者 ID（系统消息可为空） |
+| `content` | `Text` | 消息正文（不限长度） |
+| `message_type` | `String(20)` | 消息类型：`text` / `event` / `tool_result` |
+| `created_at` | `DateTime(timezone=True)` | 创建时间 |
+| `updated_at` | `DateTime(timezone=True)` | 最后修改时间 |
+
+#### 7. `tickets` — 工单表
+
+工单承接 AI 无法自动闭环的复杂问题。简单问题 Agent 回答，复杂问题升级为工单由人工客服处理。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `String(36)` | 工单唯一标识 |
+| `tenant_id` | `String(36)` → `tenants.id` | 所属租户 |
+| `conversation_id` | `String(36)` → `conversations.id` | 来源对话 |
+| `subject` | `String(200)` | 工单标题 |
+| `status` | `String(20)` | 状态：`open` / `assigned` / `resolved` / `closed` |
+| `priority` | `String(20)` | 优先级：`low` / `medium` / `high` / `urgent` |
+| `assignee_id` | `String(36)` 或 `None` → `users.id` | 指派客服（未指派时为空） |
+| `created_at` | `DateTime(timezone=True)` | 创建时间 |
+| `updated_at` | `DateTime(timezone=True)` | 最后修改时间 |
+
+**设计决策**：工单创建者不单独设 `created_by_user_id` 字段，默认从 `conversation.user_id` 推导。
+
+#### 8. `audit_logs` — 审计日志表
+
+审计日志记录关键业务操作和 AI 行为，用于合规审查、问题排查、行为追踪。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `String(36)` | 审计日志唯一标识 |
+| `tenant_id` | `String(36)` → `tenants.id` | 所属租户 |
+| `user_id` | `String(36)` 或 `None` → `users.id` | 操作用户（系统操作可为空） |
+| `action` | `String(100)` | 动作名，如 `ticket_created` / `document_uploaded` |
+| `resource_type` | `String(50)` | 资源类型，如 `ticket` / `document` / `conversation` |
+| `resource_id` | `String(36)` 或 `None` | 资源 ID |
+| `payload` | `JSON` 或 `None` | 附加详情（结构化数据） |
+| `created_at` | `DateTime(timezone=True)` | 创建时间 |
+| `updated_at` | `DateTime(timezone=True)` | 最后修改时间 |
+
+#### 9. `agent_runs` — Agent 执行记录表
+
+保存每次 LangGraph / Agent 工作流运行的关键信息，用于链路追踪、性能分析、成本统计。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `String(36)` | Agent 运行唯一标识 |
+| `tenant_id` | `String(36)` → `tenants.id` | 所属租户 |
+| `conversation_id` | `String(36)` 或 `None` → `conversations.id` | 来源对话（可空） |
+| `trigger_message_id` | `String(36)` 或 `None` → `conversation_messages.id` | 触发消息（可空） |
+| `status` | `String(20)` | 执行状态：`running` / `success` / `failed` |
+| `input_payload` | `JSON` 或 `None` | 输入参数 |
+| `output_payload` | `JSON` 或 `None` | 输出结果 |
+| `error_message` | `Text` 或 `None` | 失败时的错误信息 |
+| `started_at` | `DateTime(timezone=True)` 或 `None` | Agent 开始执行时间 |
+| `finished_at` | `DateTime(timezone=True)` 或 `None` | Agent 结束时间（可空） |
+| `created_at` | `DateTime(timezone=True)` | 记录创建时间 |
+| `updated_at` | `DateTime(timezone=True)` | 最后修改时间 |
+
+#### 10. `alembic_version` — 迁移版本管理表
+
+Alembic 自动创建，仅包含一行数据，记录当前数据库执行到了哪个迁移版本。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `version_num` | `String(32)` | 当前迁移版本号 |
+
+---
+
+### 12.3 全量关系图
+
+```text
+Tenant ──────────────────────────────────────────────────
+  │  1:N                                                  │
+  ├── User                                               │
+  ├── KnowledgeBase                                      │
+  │     └── Document (1:N)                               │
+  ├── Document                                           │
+  ├── Conversation                                       │
+  │     ├── ConversationMessage (1:N)                    │
+  │     ├── Ticket (1:N)                                 │
+  │     └── AgentRun (1:N)                               │
+  ├── Ticket                                             │
+  ├── AuditLog                                           │
+  └── AgentRun                                           │
+
+User ────────────────────────────────────────────────────
+  │  1:N                                                  │
+  ├── Conversation (发起者)                              │
+  ├── Ticket (assignee)                                  │
+  └── AuditLog (操作者)                                  │
+
+ConversationMessage ──────────────────────────────────────
+  └── AgentRun (0..1:N, 作为触发消息)                    │
+```
+
+---
+
+### 12.4 索引总览
+
+| 表名 | 索引名 | 索引字段 | 用途 |
+|------|--------|----------|------|
+| `users` | `ix_users_tenant_id` | `tenant_id` | 按租户查询用户 |
+| `users` | `uq_user_tenant_email` | `(tenant_id, email)` | 租户内邮箱唯一 |
+| `users` | `uq_user_tenant_username` | `(tenant_id, username)` | 租户内用户名唯一 |
+| `knowledge_bases` | `ix_knowledge_bases_tenant_id` | `tenant_id` | 按租户查询知识库 |
+| `knowledge_bases` | `uq_kb_tenant_name` | `(tenant_id, name)` | 租户内知识库名唯一 |
+| `documents` | `ix_documents_tenant_id` | `tenant_id` | 按租户查询文档 |
+| `documents` | `ix_documents_knowledge_base_id` | `knowledge_base_id` | 按知识库查询文档 |
+| `conversations` | `ix_conversations_tenant_id` | `tenant_id` | 按租户查询对话 |
+| `conversations` | `ix_conversations_user_id` | `user_id` | 按用户查询对话 |
+| `conversation_messages` | `ix_conversation_messages_tenant_id` | `tenant_id` | 按租户查询消息 |
+| `conversation_messages` | `ix_conversation_messages_conversation_id` | `conversation_id` | 按对话查询消息 |
+| `tickets` | `ix_tickets_tenant_id` | `tenant_id` | 按租户查询工单 |
+| `tickets` | `ix_tickets_conversation_id` | `conversation_id` | 按对话查询工单 |
+| `tickets` | `ix_tickets_assignee_id` | `assignee_id` | 按客服查询工单 |
+| `audit_logs` | `ix_audit_logs_tenant_id` | `tenant_id` | 按租户查询审计 |
+| `audit_logs` | `ix_audit_logs_user_id` | `user_id` | 按用户查询审计 |
+| `audit_logs` | `ix_audit_logs_action` | `action` | 按动作名查询审计 |
+| `agent_runs` | `ix_agent_runs_tenant_id` | `tenant_id` | 按租户查询 Agent 运行 |
+| `agent_runs` | `ix_agent_runs_conversation_id` | `conversation_id` | 按对话查询 Agent 运行 |
+| `agent_runs` | `ix_agent_runs_status` | `status` | 按状态查询 Agent 运行 |
+| `agent_runs` | `ix_agent_runs_trigger_message_id` | `trigger_message_id` | 反查消息触发的 Agent 运行 |
+
+---
+
+## 13. 实现完成记录
+
+> 本章节记录 Day 5 spec 实际完成情况，包含产出文件、验证结果、与 spec 的偏差说明。
+
+### 完成时间
+
+2026-05-22
+
+### 实际产出文件
+
+| 文件 | 说明 |
+|------|------|
+| `backend/app/models/conversation.py` | `Conversation(Base, TimestampMixin)` — id / tenant_id / user_id / status / last_message_at |
+| `backend/app/models/conversation_message.py` | `ConversationMessage(Base, TimestampMixin)` — id / tenant_id / conversation_id / sender_type / sender_id / content(Text) / message_type |
+| `backend/app/models/ticket.py` | `Ticket(Base, TimestampMixin)` — id / tenant_id / conversation_id / subject / status / priority / assignee_id |
+| `backend/app/models/audit_log.py` | `AuditLog(Base, TimestampMixin)` — id / tenant_id / user_id / action / resource_type / resource_id / payload(JSON) |
+| `backend/app/models/agent_run.py` | `AgentRun(Base, TimestampMixin)` — id / tenant_id / conversation_id / trigger_message_id / status / input_payload(JSON) / output_payload(JSON) / error_message(Text) / started_at / finished_at |
+| `backend/app/models/__init__.py` | 补充导入 5 个模型（redundant alias 模式） |
+| `backend/app/db/migrations/versions/f84d9c005858_add_conversation_message_ticket_audit_agent_run.py` | 第二批迁移脚本，含 5 张表 + 9 个索引 |
+| `backend/pyproject.toml` | 新增 `[tool.ruff]` 配置，排除 Alembic migrations 目录 |
+
+### 验证结果
+
+- ✅ `from app.models import Conversation, ConversationMessage, Ticket, AuditLog, AgentRun` → 5 个模型导入成功
+- ✅ `Base.metadata.tables.keys()` → 9 张业务表全部注册
+- ✅ `alembic revision --autogenerate` → revision `f84d9c005858`，`down_revision` 指向 Day 4 的 `50d84d83ad0e`
+- ✅ `alembic upgrade head` → Running upgrade 50d84d83ad0e → f84d9c005858
+- ✅ `\dt` → 10 张表（9 业务表 + alembic_version）
+- ✅ `poetry run uvicorn app.main:app` 启动正常，`/api/v1/health` 返回 200
+- ✅ `ruff check app/` → All checks passed!
+- ✅ `black --check app/` → 通过
+
+### 与 Spec 的偏差
+
+1. **导入方式改为相对导入**：实作时用 `from app.db.base import Base, TimestampMixin`（绝对导入），用户后续手动改为 `from ..db.base import Base, TimestampMixin`（相对导入）。两种方式都能正常运行，因为模型文件在 `app/models/` 包内，相对导入合法
+
+2. **`ruff` 配置新增**：在 `pyproject.toml` 加了 `[tool.ruff]` 配置，排除 `app/db/migrations/versions` 和 `app/db/migrations/env.py`，解决 CI 中 Alembic 迁移脚本的 F401 报错
+
+3. **多个源文件 E501 修复**：CI lint 报行过长，把函数签名、docstring 长注释、单行 JSON 字典等拆成多行
