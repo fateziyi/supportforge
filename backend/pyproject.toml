@@ -42,6 +42,15 @@ exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
 
+[tool.black]
+line-length = 88
+extend-exclude = '''
+/(
+    app/db/migrations/versions
+    | app/db/migrations/env.py
+)/
+'''
+
 [dependency-groups]
 dev = [
     "pytest (>=9.0.3,<10.0.0)",
