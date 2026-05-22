@@ -435,4 +435,47 @@ ModuleNotFoundError: No module named 'pydantic_settings'
 | Week 5 审计日志 | `request_id / user_id / tenant_id` 上下文 |
 | Week 6 问题排查与演示 | 请求日志 + 统一错误返回 |
 
+---
+
+## 9. 实现完成记录
+
+> 本章节记录 Day 2 spec 实际完成情况，包含产出文件、验证结果、与 spec 的偏差说明。
+
+### 完成时间
+
+2026-05-20
+
+### 实际产出文件
+
+| 文件 | 说明 |
+|------|------|
+| `backend/app/core/config.py` | Settings 类（pydantic-settings），含全部配置项 + `database_url_sync` |
+| `backend/app/core/context.py` | ContextVar 存储 request_id / user_id / tenant_id |
+| `backend/app/core/exceptions.py` | 5 类异常处理器（Starlette / FastAPI / App / ValidationError / Generic） |
+| `backend/app/core/logging.py` | setup_logging() + RequestLogMiddleware |
+| `backend/app/main.py` | 接入 settings、日志中间件、异常处理器 |
+
+### 验证结果
+
+- ✅ `poetry run python -c "from app.core.config import settings; print(settings.app_name)"` → `SupportForge`
+- ✅ `poetry run uvicorn app.main:app` 正常启动
+- ✅ `/api/v1/health` 返回 200
+- ✅ 404 请求返回统一格式：`{"code":40400,"message":"Not Found","data":null}`
+- ✅ 日志中能看到 `request_id`、`method`、`path`、`status`、`duration_ms`
+- ✅ `ruff check app/` 通过
+- ✅ `black --check app/` 通过
+
+### 与 Spec 的偏差
+
+1. **异常处理器扩展**：Spec 原始计划 3 类 handler（业务异常 / HTTPException / 未知异常），实作时扩展为 5 类：
+   - 增加 `StarletteHTTPException` handler（解决 404 返回 `{"detail":"Not Found"}` 的问题）
+   - 增加 `RequestValidationError` handler（FastAPI 参数校验错误也统一格式）
+   - 所有 `add_exception_handler` 加了 `# type: ignore[arg-type]`（已知 FastAPI 类型限制）
+
+2. **`_error_response` 修复**：原始实现中 `status_code=code if code < 600 else 400` 有 bug（业务码 40400 > 600 导致返回 400），修复为 `http_status = status_code if status_code else max(400, min(599, code // 100))`
+
+3. **`database_url_sync` 提前补充**：Day 2 spec 没提到这个配置项，但实作时提前加入了 `config.py`，为 Day 3 Alembic 做准备
+
+4. **新增依赖**：`pydantic-settings ^2.14.1`（Spec 推荐方案 A，实作采纳）
+
 Day 2 做完之后，这个项目才真正进入“可扩展的企业级后端骨架”状态。

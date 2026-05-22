@@ -509,3 +509,49 @@ async def get_db():
 - 先把可导入的基础设施搭好
 - 再做对外依赖接入
 - 最后才碰入口文件，减少启动失败时的排查难度
+
+---
+
+## 10. 实现完成记录
+
+> 本章节记录 Day 3 spec 实际完成情况，包含产出文件、验证结果、与 spec 的偏差说明。
+
+### 完成时间
+
+2026-05-21
+
+### 实际产出文件
+
+| 文件 | 说明 |
+|------|------|
+| `backend/app/db/base.py` | `Base(DeclarativeBase)` + `TimestampMixin(created_at / updated_at)` |
+| `backend/app/db/session.py` | `engine` + `AsyncSessionLocal` + `get_db()` yield 依赖 |
+| `backend/app/api/deps.py` | `get_db()` 从占位改为 `from app.db.session import get_db` 转发 |
+| `backend/alembic.ini` | Alembic 配置文件，URL 为占位值（由 env.py 动态注入） |
+| `backend/app/db/migrations/env.py` | Alembic 运行入口，绑定 `Base.metadata` + `import app.models` |
+| `backend/app/db/migrations/script.py.mako` | Alembic 迁移模板（初始化生成） |
+| `backend/app/db/migrations/versions/` | 迁移脚本目录（Day 3 为空） |
+| `backend/app/main.py` | 接入 `lifespan` 数据库生命周期（startup 日志 + shutdown dispose） |
+| `backend/pyproject.toml` | 新增 `greenlet ^3.5.1` 依赖（SQLAlchemy async 桥接所需） |
+
+### 验证结果
+
+- ✅ `poetry run python -c "from app.db.base import Base, TimestampMixin"` → 导入成功
+- ✅ `poetry run python -c "from app.db.session import engine, AsyncSessionLocal, get_db"` → 导入成功
+- ✅ `poetry run alembic current` → Context impl PostgresqlImpl，无报错
+- ✅ `poetry run alembic upgrade head` → 执行成功
+- ✅ `podman exec supportforge-postgres psql -U supportforge -c "\dt"` → 显示 `alembic_version` 表
+- ✅ `poetry run uvicorn app.main:app` 启动日志含 `SupportForge 启动 | env=development | port=8000`
+- ✅ `/api/v1/health` 返回 `{"status":"ok","service":"supportforge-backend"}`
+- ✅ `ruff check app/` 通过
+- ✅ `black --check app/` 通过
+
+### 与 Spec 的偏差
+
+1. **`env.py` 类型忽略标记**：`from alembic import context` 加了 `# type: ignore[import-untyped]`，解决 Pylance 报错；`import app.models` 加了 `# type: ignore[import-relative]`，解决 Pylance 把绝对导入误判为隐式相对导入
+
+2. **`greenlet` 依赖补充**：Spec 未提及，但实作时发现 SQLAlchemy 异步引擎需要 `greenlet` 库做同步/异步桥接，补加到 pyproject.toml
+
+3. **Lifespan 实现**：Spec 建议可选做轻量 startup 连接检查，实作选择了"startup 只记日志不发 SQL"的方案，避免启动变慢
+
+4. **`database_url_sync`**：已在 Day 2 的 config.py 中提前补充，Day 3 无需额外修改

@@ -405,4 +405,50 @@ poetry run python --version
 | Day 3 | db/base.py / db/session.py / Alembic | `api/deps.py` 里的 `get_db()` 占位 |
 | Week 2 | JWT / RBAC / 当前用户上下文 | `api/deps.py` 里的 `get_current_user()` 占位 |
 
+---
+
+## 9. 实现完成记录
+
+> 本章节记录 Day 1 spec 实际完成情况，包含产出文件、验证结果、与 spec 的偏差说明。
+
+### 完成时间
+
+2026-05-19
+
+### 实际产出文件
+
+| 文件 | 说明 |
+|------|------|
+| `backend/app/__init__.py` | 包初始化（空） |
+| `backend/app/main.py` | FastAPI 入口，挂载 api_router |
+| `backend/app/core/__init__.py` | 包初始化（空） |
+| `backend/app/db/__init__.py` | 包初始化，含注释 |
+| `backend/app/models/__init__.py` | 包初始化，含 Alembic 导入说明占位 |
+| `backend/app/schemas/__init__.py` | 包初始化（空） |
+| `backend/app/api/__init__.py` | 包初始化（空） |
+| `backend/app/api/deps.py` | 依赖注入占位（get_db + get_current_user） |
+| `backend/app/api/v1/__init__.py` | 包初始化（空） |
+| `backend/app/api/v1/router.py` | v1 路由聚合 |
+| `backend/app/api/v1/health.py` | 健康检查接口 |
+| `backend/app/services/__init__.py` | 包初始化（空） |
+| `backend/app/repositories/__init__.py` | 包初始化（空） |
+| `backend/app/rag/__init__.py` | 包初始化（空） |
+| `backend/app/tasks/__init__.py` | 包初始化（空） |
+| `backend/app/integrations/__init__.py` | 包初始化（空） |
+| `backend/app/utils/__init__.py` | 包初始化（空） |
+| `backend/app/agent/__init__.py` | 包初始化（空） |
+| `backend/app/agent/prompts/*.md` | Agent 提示词（已有） |
+
+### 验证结果
+
+- ✅ `poetry run uvicorn app.main:app --reload` 正常启动
+- ✅ `http://localhost:8000/docs` Swagger 可访问
+- ✅ `http://localhost:8000/api/v1/health` 返回 `{"status":"ok","service":"supportforge-backend"}`
+- ✅ `ruff check app/` 通过
+- ✅ `black --check app/` 通过
+
+### 与 Spec 的偏差
+
+无偏差，所有产出与 spec §2 目标产出一致。
+
 这样设计的目的，是保证 Day 1 实现最小闭环，同时不和后续开发顺序冲突。
