@@ -22,7 +22,7 @@
   - 但不同租户可以有相同邮箱（比如不同公司都有 hr@company.com）
 - password_hash: 存储加密后的密码
   - 绝对不能叫 password，那会误导成存储明文密码
-  - Week 2 会用 bcrypt 或 argon2 进行哈希
+  - Week 2 会用 argon2 进行哈希（比 bcrypt 更抗 GPU/ASIC 攻击）
 - role: 用户角色，字符串类型
   - 可选值必须与 CLAUDE.md §7 一致：
     - platform_admin: 平台超级管理员
