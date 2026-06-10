@@ -1,11 +1,11 @@
 # Week 1 每日任务拆分
 
 > 项目骨架与基础设施
-> 状态：前端已初始化 ✅ | Docker 已配置 ✅ | 后端零代码 ❌ | 数据库未建表 ❌
+> 状态：Week 1 全部完成 ✅ | 前端已初始化 ✅ | Docker 已配置 ✅ | 后端骨架完成 ✅ | 数据库已建表 ✅ | CI 已配置 ✅
 
 ---
 
-## Day 1：FastAPI 入口 + 项目目录结构
+## Day 1：FastAPI 入口 + 项目目录结构 ✅
 
 **目标**：让后端能跑起来，访问到 `http://localhost:8000/docs` 看到 Swagger 页面。
 
@@ -36,7 +36,7 @@ cd backend && poetry run uvicorn app.main:app --reload
 
 ---
 
-## Day 2：核心配置模块
+## Day 2：核心配置模块 ✅
 
 **目标**：配置管理、日志初始化、统一异常处理、统一响应格式全部就位。
 
@@ -61,7 +61,7 @@ curl http://localhost:8000/api/v1/nonexist
 
 ---
 
-## Day 3：数据库连接 + ORM 基类 + Alembic 初始化
+## Day 3：数据库连接 + ORM 基类 + Alembic 初始化 ✅
 
 **目标**：PostgreSQL 连接正常，Alembic 迁移框架就位，ORM 基类可用。
 
@@ -85,7 +85,7 @@ cd backend && poetry run alembic upgrade head
 
 ---
 
-## Day 4：核心模型（Part 1）— 租户 + 用户 + 知识库 + 文档
+## Day 4：核心模型（Part 1）— 租户 + 用户 + 知识库 + 文档 ✅
 
 **目标**：4 张核心业务表的 ORM 模型写好，Alembic 能生成迁移脚本。
 
@@ -109,7 +109,7 @@ poetry run alembic upgrade head
 
 ---
 
-## Day 5：核心模型（Part 2）— 对话 + 消息 + 工单 + 审计 + Agent 执行记录
+## Day 5：核心模型（Part 2）— 对话 + 消息 + 工单 + 审计 + Agent 执行记录 ✅
 
 **目标**：剩余 5 张表的 ORM 模型写好，全部 9 张表在数据库中建好。
 
@@ -134,7 +134,7 @@ poetry run alembic upgrade head
 
 ---
 
-## Day 6：API 路由骨架 + 依赖注入 + 初始数据脚本
+## Day 6：API 路由骨架 + 依赖注入 + 初始数据脚本 ✅
 
 **目标**：API v1 路由框架搭好，能访问 `/api/v1/` 看到路由列表，能初始化默认数据。
 
@@ -160,7 +160,7 @@ curl -X POST http://localhost:8000/api/v1/auth/login -d '{"email":"admin@acme.co
 
 ---
 
-## Day 7：集成验证 + CI 跑通 + Podman Compose 全栈启动
+## Day 7：集成验证 + CI 跑通 + Podman Compose 全栈启动 ✅
 
 **目标**：全部服务能通过 Podman Compose 一键启动，CI Backend 流水线跑通。
 

@@ -34,6 +34,8 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # 复制应用代码
 COPY app/ ./app/
+# 复制初始化脚本（compose 内可能需要运行 init_demo_data.py）
+COPY scripts/ ./scripts/
 
 # 暴露端口
 EXPOSE 8000

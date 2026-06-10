@@ -11,8 +11,10 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    # compose 场景使用 .env.compose（连接地址指向 compose 服务名而非 localhost）
+    # 本地开发用 .env（从 .env.example 复制），compose 用 .env.compose
     env_file:
-      - ./backend/.env
+      - ./backend/.env.compose
     depends_on:
       postgres:
         condition: service_healthy
@@ -99,12 +101,17 @@ services:
       dockerfile: Dockerfile
     container_name: supportforge-celery-worker
     restart: unless-stopped
+    # ⚠️ 当前 Week 1 尚未实现 app.tasks.celery_app 模块
+    # celery-worker 容器会启动失败，这是预期行为
+    # Week 2 实现 Celery 任务后此服务才能正常运行
     command: ["celery", "-A", "app.tasks.celery_app", "worker", "--loglevel=info"]
     env_file:
-      - ./backend/.env
+      - ./backend/.env.compose
     depends_on:
-      - redis
-      - postgres
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - supportforge
 

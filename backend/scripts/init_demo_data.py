@@ -18,22 +18,34 @@
 执行方式：
     cd backend
     poetry run python -m app.db.init_db        # 先初始化基础数据
-    poetry run scripts.init_demo_data          # 再初始化演示数据
+    poetry run python scripts/init_demo_data.py  # 再初始化演示数据
 
 注意：
+- scripts/ 不属于 app 包，需要 sys.path 调整才能使用绝对导入 from app.xxx
 - Day 6 spec 标注为"可选但推荐"
 - 不纳入 Day 6 必做 DoD
 - 如果时间不够，可以跳过，留到 Day 7 / Week 2
 """
 
-import uuid
+# ── sys.path 调整：scripts/ 在 app 包之外，需要把 backend/ 目录加入路径 ──
+# 这使得脚本中的 `from app.xxx` 绝对导入可以正常解析，
+# 而不必依赖外部 PYTHONPATH 环境变量设置
+import sys
+from pathlib import Path
 
-from app.db.session import AsyncSessionLocal, engine
-from app.models.conversation import Conversation
-from app.models.document import Document
-from app.models.knowledge_base import KnowledgeBase
-from app.models.ticket import Ticket
-from sqlalchemy import select
+# 将 backend/ 目录（即 app 包的父目录）加入 sys.path
+_backend_dir = str(Path(__file__).resolve().parent.parent)
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
+import uuid  # noqa: E402 — 必须在 sys.path 调整之后才能导入 app 模块
+
+from app.db.session import AsyncSessionLocal, engine  # noqa: E402
+from app.models.conversation import Conversation  # noqa: E402
+from app.models.document import Document  # noqa: E402
+from app.models.knowledge_base import KnowledgeBase  # noqa: E402
+from app.models.ticket import Ticket  # noqa: E402
+from sqlalchemy import select  # noqa: E402
 
 # ── 默认数据常量 ──
 DEFAULT_TENANT_ID = "default-tenant-id"
