@@ -23,6 +23,9 @@
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# 仅用于本地开发，长度满足 HS256 对称密钥的最低推荐值；生产环境必须覆盖。
+DEFAULT_DEVELOPMENT_JWT_SECRET = "development-only-jwt-secret-key-change-me-2026"
+
 
 class Settings(BaseSettings):
     """
@@ -51,7 +54,7 @@ class Settings(BaseSettings):
 
     # ── JWT 认证配置（Week 2 使用，Day 2 先只读取不使用）──
     # jwt_secret_key: JWT 签名密钥，生产环境必须更换为强随机值
-    jwt_secret_key: str = "change-me-in-production"
+    jwt_secret_key: str = DEFAULT_DEVELOPMENT_JWT_SECRET
     # jwt_algorithm: JWT 签名算法，默认 HS256
     jwt_algorithm: str = "HS256"
     # access_token_expire_minutes: Access Token 有效期（分钟）
@@ -90,7 +93,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
         """生产环境拒绝使用示例 JWT 密钥。"""
-        uses_default_jwt_secret = self.jwt_secret_key == "change-me-in-production"
+        uses_default_jwt_secret = self.jwt_secret_key == DEFAULT_DEVELOPMENT_JWT_SECRET
         if self.app_env == "production" and uses_default_jwt_secret:
             raise ValueError("production 环境必须配置非默认 JWT_SECRET_KEY")
         return self

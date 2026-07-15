@@ -28,6 +28,7 @@
 """
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import HTTPException as FastAPIHTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -305,8 +306,12 @@ async def validation_exception_handler(
     msg = first_error.get("msg", "参数校验失败")
     message = f"{field}: {msg}" if field else msg
 
+    # 未声明 Content-Type 时，FastAPI 错误详情中的 input 可能是 bytes。
+    # 先转换为 JSON 安全类型，避免校验失败本身又触发 JSONResponse 序列化异常。
+    safe_error_details = jsonable_encoder(error_details)
+
     return _error_response(
         code=42200,
         message=message,
-        data=error_details,  # 把完整的校验错误列表放在 data 里，前端可以据此渲染
+        data=safe_error_details,  # 把完整的校验错误列表放在 data 里，前端可以据此渲染
     )

@@ -41,6 +41,14 @@
 
 ---
 
+## 📁 开发 Spec (`docs/spec/`)
+
+| 文件 | 内容 |
+|------|------|
+| [day8-auth-password-jwt-login.md](spec/day8-auth-password-jwt-login.md) | Day 8：Argon2 密码哈希、Access JWT 与真实登录闭环 |
+
+---
+
 ## 📁 Agent Prompt 文件（已创建为实际代码文件）
 
 > 已直接写入 `backend/app/agent/prompts/` 目录，无需在文档中维护。

@@ -15,10 +15,8 @@
   - 如果后续初始化逻辑变复杂，应在 Week 2/3 抽到 service/repository
 
 密码哈希说明：
-- 即使 Day 6 还没做完整认证，也不能把明文密码直接存进 password_hash
-- 这里使用 hashlib.sha256 作为临时方案
-- Week 2 会替换为 argon2（更安全的哈希算法，比 bcrypt 更抗 GPU/ASIC 攻击）
-- sha256 不适合密码存储（容易被彩虹表攻击），但 Day 6 作为临时方案够用
+- 密码只以 Argon2id 哈希形式保存，绝不保存明文
+- 已存在的 Day 6 演示账号会在本脚本再次执行时自动升级旧 sha256 哈希
 
 执行方式：
     cd backend
@@ -30,10 +28,9 @@
 - "初始化脚本应该放在哪里？" → db/init_db.py，不属于业务层
 """
 
-import hashlib
-
 from sqlalchemy import select
 
+from ..core.security import hash_password, is_argon2_hash
 from ..db.session import AsyncSessionLocal, engine
 from ..models.tenant import Tenant
 from ..models.user import User
@@ -47,30 +44,6 @@ DEFAULT_ADMIN_EMAIL = "admin@acme.com"
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_ROLE = "tenant_admin"
 DEFAULT_ADMIN_PASSWORD = "123456"
-
-
-def _temporary_password_hash(password: str) -> str:
-    """
-    临时密码哈希函数（Day 6 用，Week 2 替换为 argon2）
-
-    为什么 Day 6 不直接用 argon2？
-    - argon2 需要额外依赖（argon2-cffi 库），Day 6 不引入太多新依赖
-    - argon2 是内存硬哈希算法，比 bcrypt 更抗 GPU/ASIC 暴力破解
-    - 但 sha256 绝对不适合生产环境密码存储：
-      - sha256 是快速哈希，容易被暴力破解
-      - 没有盐值（salt），彩虹表可以直接命中
-    - Week 2 替换为 argon2 后，需要同步更新：
-      1. init_db.py 的哈希函数
-      2. auth.py 的密码校验逻辑
-      3. 已创建的默认管理员需要重新生成密码哈希
-
-    Args:
-        password: 明文密码
-
-    Returns:
-        sha256 哈希后的字符串（临时方案，不安全）
-    """
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 async def create_default_tenant() -> str:
@@ -116,19 +89,27 @@ async def create_default_admin_user() -> str:
     3. 如果不存在，创建默认管理员，返回"created"
 
     注意：
-    - password_hash 使用临时 sha256 哈希，Week 2 替换为 argon2
-    - 不能把明文密码直接存进 password_hash，即使 Day 6 是 demo 数据
+    - password_hash 使用 Argon2id 哈希，不能保存明文密码
+    - 旧版 demo 数据存在时会升级哈希，保证本地环境可直接登录
 
     Returns:
         "created" 或 "skipped"
     """
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(User).where(User.email == DEFAULT_ADMIN_EMAIL)
+            select(User).where(
+                User.tenant_id == DEFAULT_TENANT_ID,
+                User.email == DEFAULT_ADMIN_EMAIL,
+            )
         )
         existing = result.scalar_one_or_none()
 
         if existing:
+            if not is_argon2_hash(existing.password_hash):
+                existing.password_hash = hash_password(DEFAULT_ADMIN_PASSWORD)
+                await session.commit()
+                print(f"  ✅ Admin '{DEFAULT_ADMIN_EMAIL}' password hash upgraded.")
+                return "upgraded"
             print(f"  ⏭  Admin '{DEFAULT_ADMIN_EMAIL}' already exists, skipped.")
             return "skipped"
 
@@ -137,7 +118,7 @@ async def create_default_admin_user() -> str:
             tenant_id=DEFAULT_TENANT_ID,
             username=DEFAULT_ADMIN_USERNAME,
             email=DEFAULT_ADMIN_EMAIL,
-            password_hash=_temporary_password_hash(DEFAULT_ADMIN_PASSWORD),
+            password_hash=hash_password(DEFAULT_ADMIN_PASSWORD),
             role=DEFAULT_ADMIN_ROLE,
             status="active",
         )
