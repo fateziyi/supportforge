@@ -24,7 +24,7 @@
   但统一继承可保持代码风格一致，减少决策维度。
 """
 
-from sqlalchemy import JSON, ForeignKey, String
+from sqlalchemy import JSON, ForeignKey, ForeignKeyConstraint, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base, TimestampMixin
@@ -34,6 +34,13 @@ class AuditLog(Base, TimestampMixin):
     """审计日志表 — 记录关键业务操作和 AI 行为"""
 
     __tablename__ = "audit_logs"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["user_id", "tenant_id"],
+            ["users.id", "users.tenant_id"],
+            name="fk_audit_logs_user_tenant",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
 
@@ -82,4 +89,4 @@ class AuditLog(Base, TimestampMixin):
     # ── 关系定义 ──
     tenant = relationship("Tenant")
     # 操作用户（可为空）
-    user = relationship("User")
+    user = relationship("User", foreign_keys=[user_id])

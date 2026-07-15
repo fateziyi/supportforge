@@ -1,7 +1,7 @@
 # Week 1 每日任务拆分
 
 > 项目骨架与基础设施
-> 状态：Week 1 全部完成 ✅ | 前端已初始化 ✅ | Docker 已配置 ✅ | 后端骨架完成 ✅ | 数据库已建表 ✅ | CI 已配置 ✅
+> 状态：Week 1 全部完成 ✅ | 前端已初始化并可生产构建 ✅ | Podman 基础服务已启动 ✅ | 后端骨架完成 ✅ | 数据库迁移已执行 ✅ | CI 已配置并强制运行测试 ✅
 
 ---
 
@@ -50,13 +50,15 @@ cd backend && poetry run uvicorn app.main:app --reload
 | 4 | 创建 `app/core/security.py` — JWT 签发/解析骨架（暂不完整） | `backend/app/core/security.py` |
 | 5 | 创建 `app/core/context.py` — ContextVar 请求级上下文 | `backend/app/core/context.py` |
 | 6 | 在 `main.py` 中注册全局异常处理器和日志中间件 | 更新 `backend/app/main.py` |
+| 7 | 增加 CORS 配置与生产环境默认 JWT 密钥保护 | 更新 `backend/app/core/config.py` + `backend/app/main.py` |
+| 8 | 将健康检查和登录成功响应统一为 `{code, message, data}` | 新增 `backend/app/schemas/common.py`；更新 health/auth 路由 |
 
 ### 验证标准
 
 ```bash
 # 启动后端，访问一个不存在的路由
 curl http://localhost:8000/api/v1/nonexist
-# 返回统一格式：{"code": 404, "message": "Not Found", "data": null}
+# 返回统一格式：{"code": 40400, "message": "Not Found", "data": null}
 ```
 
 ---
@@ -99,12 +101,14 @@ cd backend && poetry run alembic upgrade head
 | 4 | 创建 `app/models/document.py` — 文档表模型 | `backend/app/models/document.py` |
 | 5 | 更新 `app/models/__init__.py` — 导入所有模型让 Alembic 能识别 | 更新 `backend/app/models/__init__.py` |
 | 6 | 生成 Alembic 迁移脚本 | `poetry run alembic revision --autogenerate -m "add tenant user kb doc tables"` |
+| 7 | 为租户关联资源补充数据库级归属一致性约束 | `aa1b2c3d4e5f_add_tenant_scope_foreign_keys.py` |
 
 ### 验证标准
 
 ```bash
 poetry run alembic upgrade head
 # PostgreSQL 中能看到 tenants、users、knowledge_bases、documents 4 张表
+# 文档不能关联其他租户的知识库
 ```
 
 ---
@@ -169,25 +173,34 @@ curl -X POST http://localhost:8000/api/v1/auth/login -d '{"email":"admin@acme.co
 | # | 任务 | 产出文件 |
 |---|------|----------|
 | 1 | 验证后端本地启动 + 数据库连接 + API 访问 | 手动验证 |
-| 2 | 验证 `podman compose up -d` 全栈能跑 | 手动验证 |
-| 3 | 运行 `poetry run ruff check` + `poetry run black --check` 确保 lint 通过 | 手动验证 |
-| 4 | 修复 CI 可能报的问题（lint / import 顺序等） | 按需修复 |
-| 5 | push 到 GitHub，确认 CI Backend workflow 通过 | 手动验证 |
-| 6 | 更新 `PROGRESS.md` 记录 Week 1 完成状态 | 更新 `PROGRESS.md` |
-| 7 | 更新 `README.md` 补充后端启动说明 | 更新 `README.md` |
+| 2 | 验证 Postgres、Redis、Qdrant 基础服务启动 | 手动验证 |
+| 3 | 配置后端 healthcheck，前端等待后端健康后启动；未实现的 Worker 改为可选 profile | 更新 `compose.yml` |
+| 4 | 建立 API 契约测试，CI 不再因缺少测试而静默跳过 | `backend/tests/test_api_contract.py` + CI workflow |
+| 5 | 运行 `poetry run ruff check` + `poetry run black --check` + `mypy` + `pytest` | 手动验证 |
+| 6 | 移除前端在线 Google Fonts 依赖并替换默认首页 | 更新 `frontend/src/app/layout.tsx` + `frontend/src/app/page.tsx` |
+| 7 | 整理 Alembic 空迁移，保持可读的单一迁移链 | 更新 migrations 目录 |
+| 8 | 修复 CI 可能报的问题（lint / import 顺序等） | 按需修复 |
+| 9 | push 到 GitHub，确认 CI Backend workflow 通过 | 手动验证（待 push 后确认） |
+| 10 | 更新 `PROGRESS.md` 记录 Week 1 完成状态 | 更新 `PROGRESS.md` |
+| 11 | 更新 `README.md` 补充后端启动说明 | 更新 `README.md` |
 
 ### 验证标准
 
 ```bash
-# 全栈启动
-podman compose up -d
+# 启动基础服务（Worker 当前是可选 profile）
+podman compose up -d postgres redis qdrant
 # 后端 API 可访问
 curl http://localhost:8000/docs
 # 前端页面可访问
 curl http://localhost:3000
 # PostgreSQL 有 9 张表 + 默认数据
 podman compose exec postgres psql -U supportforge -c "\dt"
-# GitHub Actions CI Backend ✅ 通过
+# 运行本地质量门禁
+cd backend && poetry run ruff check app scripts tests
+cd backend && poetry run black --check app scripts tests
+cd backend && poetry run mypy app --ignore-missing-imports
+cd backend && poetry run pytest -q
+# GitHub Actions CI Backend：待 push 后确认
 ```
 
 ---
@@ -204,6 +217,9 @@ podman compose exec postgres psql -U supportforge -c "\dt"
 | 创建 Agent Prompt 文件 | `backend/app/agent/prompts/*.md` | ✅ 已完成 |
 | 配置 CI/CD 流水线 | `.github/workflows/*.yml` | ✅ 已完成 |
 | 创建 Dockerfile | `backend/Dockerfile` + `frontend/Dockerfile` | ✅ 已完成 |
+| API 统一成功响应契约 | `backend/app/schemas/common.py` + health/auth 路由 | ✅ 已完成 |
+| Week 1 契约测试 | `backend/tests/test_api_contract.py` | ✅ 已完成（2 passed） |
+| 租户关联资源数据库隔离 | `aa1b2c3d4e5f_add_tenant_scope_foreign_keys.py` | ✅ 已完成 |
 
 ---
 
@@ -213,7 +229,7 @@ podman compose exec postgres psql -U supportforge -c "\dt"
 backend/app/
 ├── main.py              ✅ FastAPI 入口，Swagger 可访问
 ├── core/
-│   ├── config.py        ✅ 配置管理
+│   ├── config.py        ✅ 配置管理 + CORS + 生产密钥保护
 │   ├── logging.py       ✅ 统一日志
 │   ├── exceptions.py    ✅ 统一异常 + 响应格式
 │   ├── security.py      ✅ JWT 骨架
@@ -223,9 +239,10 @@ backend/app/
 │   ├── session.py       ✅ 数据库连接
 │   ├── init_db.py       ✅ 初始化脚本
 │   └── migrations/      ✅ Alembic 迁移
-├── models/              ✅ 9 张表模型
+├── models/              ✅ 9 张表模型 + 租户归属组合外键
 ├── schemas/
-│   └── auth.py          ✅ 认证 Schema
+│   ├── auth.py          ✅ 认证 Schema
+│   └── common.py        ✅ API 统一响应 Schema
 ├── api/
 │   ├── deps.py          ✅ 依赖注入骨架
 │   └── v1/
@@ -234,7 +251,18 @@ backend/app/
 ├── agent/prompts/       ✅ 5 个 prompt 文件（已有）
 └── 其他目录 __init__.py  ✅ 空占位
 
-PostgreSQL: 9 张表 + 索引 + 默认租户和管理员账号
-Podman Compose: 全栈可一键启动
-CI/CD: CI Backend workflow ✅ 通过
+PostgreSQL: 9 张表 + 索引 + 默认租户和管理员账号 + 租户归属组合外键
+Podman Compose: Postgres / Redis / Qdrant 已验证；Celery Worker 为可选 profile，待 Week 2 实现任务模块后启用
+质量验证: ruff ✅ | black ✅ | mypy ✅ | pytest ✅（2 passed）| 前端 lint ✅ | 前端 production build ✅
 ```
+
+---
+
+## Week 1 收口验证记录（2026-07-15）
+
+- ✅ `poetry run alembic upgrade head`：已升级至 `aa1b2c3d4e5f`，新增跨租户关联保护。
+- ✅ `poetry run python -m app.db.init_db` 与 `poetry run python scripts/init_demo_data.py`：重复执行保持幂等。
+- ✅ 后端健康检查：`GET /api/v1/health` 返回统一响应结构与 `status=ok`。
+- ✅ 前端 `npm run build`：生产构建通过，不再依赖在线 Google Fonts。
+- ✅ 本地服务地址：前端 `http://localhost:3000`，后端 Swagger `http://localhost:8000/docs`。
+- ⚠️ 真实 JWT、Argon2 密码哈希、RBAC、Celery 业务任务仍属于 Week 2，当前 mock 登录仅限本地开发验证。

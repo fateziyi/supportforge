@@ -28,7 +28,7 @@
   但统一继承可减少代码风格分裂。
 """
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import ForeignKey, ForeignKeyConstraint, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base, TimestampMixin
@@ -38,6 +38,14 @@ class ConversationMessage(Base, TimestampMixin):
     """对话消息明细表 — 每一条对话消息"""
 
     __tablename__ = "conversation_messages"
+    __table_args__ = (
+        UniqueConstraint("id", "tenant_id", name="uq_conversation_messages_id_tenant"),
+        ForeignKeyConstraint(
+            ["conversation_id", "tenant_id"],
+            ["conversations.id", "conversations.tenant_id"],
+            name="fk_messages_conversation_tenant",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
 
@@ -87,4 +95,5 @@ class ConversationMessage(Base, TimestampMixin):
     conversation = relationship(
         "Conversation",
         back_populates="messages",
+        foreign_keys=[conversation_id],
     )

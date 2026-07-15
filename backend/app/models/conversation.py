@@ -25,7 +25,13 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base, TimestampMixin
@@ -35,6 +41,14 @@ class Conversation(Base, TimestampMixin):
     """对话主表 — 一轮客户咨询会话的容器"""
 
     __tablename__ = "conversations"
+    __table_args__ = (
+        UniqueConstraint("id", "tenant_id", name="uq_conversations_id_tenant"),
+        ForeignKeyConstraint(
+            ["user_id", "tenant_id"],
+            ["users.id", "users.tenant_id"],
+            name="fk_conversations_user_tenant",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
 
@@ -71,10 +85,17 @@ class Conversation(Base, TimestampMixin):
     # ── 关系定义 ──
     # relationship 用字符串类名，避免循环导入
     tenant = relationship("Tenant")
-    user = relationship("User")
+    user = relationship("User", foreign_keys=[user_id])
     messages = relationship(
         "ConversationMessage",
         back_populates="conversation",
+        foreign_keys="ConversationMessage.conversation_id",
     )
-    tickets = relationship("Ticket", back_populates="conversation")
-    agent_runs = relationship("AgentRun", back_populates="conversation")
+    tickets = relationship(
+        "Ticket", back_populates="conversation", foreign_keys="Ticket.conversation_id"
+    )
+    agent_runs = relationship(
+        "AgentRun",
+        back_populates="conversation",
+        foreign_keys="AgentRun.conversation_id",
+    )

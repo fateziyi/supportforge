@@ -20,6 +20,7 @@
 - "生产环境和开发环境怎么区分？" → app_env 字段控制，.env 文件按环境切换
 """
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -83,6 +84,22 @@ class Settings(BaseSettings):
     # ── Celery 配置（Week 5 使用）──
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
+
+    cors_origins: str = "http://localhost:3000"
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        """生产环境拒绝使用示例 JWT 密钥。"""
+        uses_default_jwt_secret = self.jwt_secret_key == "change-me-in-production"
+        if self.app_env == "production" and uses_default_jwt_secret:
+            raise ValueError("production 环境必须配置非默认 JWT_SECRET_KEY")
+        return self
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """把逗号分隔的环境变量转成 CORS 来源列表。"""
+        origins = (origin.strip() for origin in self.cors_origins.split(","))
+        return [origin for origin in origins if origin]
 
     # pydantic-settings 的配置
     # env_file: 指定 .env 文件路径，自动从该文件读取配置

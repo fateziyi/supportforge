@@ -67,6 +67,7 @@ class User(Base, TimestampMixin):
     __table_args__ = (
         UniqueConstraint("tenant_id", "email", name="uq_user_tenant_email"),
         UniqueConstraint("tenant_id", "username", name="uq_user_tenant_username"),
+        UniqueConstraint("id", "tenant_id", name="uq_users_id_tenant"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)

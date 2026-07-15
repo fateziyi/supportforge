@@ -33,6 +33,7 @@ from ...schemas.auth import (
     LoginRequest,
     TokenResponse,
 )
+from ...schemas.common import ApiResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -44,8 +45,8 @@ DEFAULT_TENANT_ID = "default-tenant-id"
 DEFAULT_ADMIN_ID = "default-admin-id"
 
 
-@router.post("/login", response_model=TokenResponse)
-async def login(payload: LoginRequest) -> TokenResponse:
+@router.post("/login", response_model=ApiResponse[TokenResponse])
+async def login(payload: LoginRequest) -> ApiResponse[TokenResponse]:
     """
     登录接口骨架（Day 6 mock 版本）
 
@@ -81,15 +82,17 @@ async def login(payload: LoginRequest) -> TokenResponse:
 
     # 返回 mock token + 用户信息
     # Week 2 替换为：真实 JWT 签发（access_token 和 refresh_token）
-    return TokenResponse(
-        access_token="mock-access-token",
-        refresh_token="mock-refresh-token",
-        token_type="bearer",
-        expires_in=3600,
-        user=CurrentUserResponse(
-            id=DEFAULT_ADMIN_ID,
-            tenant_id=DEFAULT_TENANT_ID,
-            email=DEFAULT_ADMIN_EMAIL,
-            role="tenant_admin",
-        ),
+    return ApiResponse(
+        data=TokenResponse(
+            access_token="mock-access-token",
+            refresh_token="mock-refresh-token",
+            token_type="bearer",
+            expires_in=3600,
+            user=CurrentUserResponse(
+                id=DEFAULT_ADMIN_ID,
+                tenant_id=DEFAULT_TENANT_ID,
+                email=DEFAULT_ADMIN_EMAIL,
+                role="tenant_admin",
+            ),
+        )
     )

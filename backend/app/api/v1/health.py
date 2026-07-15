@@ -17,6 +17,9 @@
 """
 
 from fastapi import APIRouter
+from pydantic import BaseModel
+
+from ...schemas.common import ApiResponse
 
 # APIRouter 是 FastAPI 的路由分组工具
 # 每个模块创建自己的 router，然后在 router.py 中统一聚合
@@ -24,8 +27,15 @@ from fastapi import APIRouter
 router = APIRouter()
 
 
-@router.get("/health")
-async def health_check() -> dict[str, str]:
+class HealthResponse(BaseModel):
+    """健康检查的业务数据。"""
+
+    status: str
+    service: str
+
+
+@router.get("/health", response_model=ApiResponse[HealthResponse])
+async def health_check() -> ApiResponse[HealthResponse]:
     """
     健康检查接口
 
@@ -34,7 +44,4 @@ async def health_check() -> dict[str, str]:
     Returns:
         dict: 包含 status 和 service 字段的简单字典
     """
-    return {
-        "status": "ok",  # 服务运行正常
-        "service": "supportforge-backend",  # 服务名称标识
-    }
+    return ApiResponse(data=HealthResponse(status="ok", service="supportforge-backend"))

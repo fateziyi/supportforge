@@ -41,11 +41,6 @@ jobs:
         continue-on-error: true  # 初期允许类型检查不完全通过
 
       - name: Run Tests
-        run: |
-          if [ -d tests ]; then
-            poetry run pytest tests/ -v --tb=short
-          else
-            echo "tests/ directory not found, skip pytest for now"
-          fi
+        run: poetry run pytest tests/ -v --tb=short
         env:
-          PYTHONPATH: app
+          PYTHONPATH: .

@@ -28,7 +28,7 @@ started_at 与 created_at 的区别：
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String, Text
+from sqlalchemy import JSON, DateTime, ForeignKey, ForeignKeyConstraint, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base, TimestampMixin
@@ -38,6 +38,18 @@ class AgentRun(Base, TimestampMixin):
     """Agent 执行记录表 — 每次 Agent 工作流运行"""
 
     __tablename__ = "agent_runs"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["conversation_id", "tenant_id"],
+            ["conversations.id", "conversations.tenant_id"],
+            name="fk_agent_runs_conversation_tenant",
+        ),
+        ForeignKeyConstraint(
+            ["trigger_message_id", "tenant_id"],
+            ["conversation_messages.id", "conversation_messages.tenant_id"],
+            name="fk_agent_runs_message_tenant",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
 
@@ -109,6 +121,10 @@ class AgentRun(Base, TimestampMixin):
     conversation = relationship(
         "Conversation",
         back_populates="agent_runs",
+        foreign_keys=[conversation_id],
     )
     # 触发消息（可为空）
-    trigger_message = relationship("ConversationMessage")
+    trigger_message = relationship(
+        "ConversationMessage",
+        foreign_keys=[trigger_message_id],
+    )

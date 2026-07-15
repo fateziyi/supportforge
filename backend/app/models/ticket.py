@@ -28,7 +28,7 @@
   如后续需要独立字段可在 Week 2 补充。
 """
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, ForeignKeyConstraint, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base, TimestampMixin
@@ -38,6 +38,18 @@ class Ticket(Base, TimestampMixin):
     """工单表 — 承接 AI 无法闭环解决的问题"""
 
     __tablename__ = "tickets"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["conversation_id", "tenant_id"],
+            ["conversations.id", "conversations.tenant_id"],
+            name="fk_tickets_conversation_tenant",
+        ),
+        ForeignKeyConstraint(
+            ["assignee_id", "tenant_id"],
+            ["users.id", "users.tenant_id"],
+            name="fk_tickets_assignee_tenant",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
 
@@ -90,6 +102,7 @@ class Ticket(Base, TimestampMixin):
     conversation = relationship(
         "Conversation",
         back_populates="tickets",
+        foreign_keys=[conversation_id],
     )
     # 指派的客服（可为空）
-    assignee = relationship("User")
+    assignee = relationship("User", foreign_keys=[assignee_id])

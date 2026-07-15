@@ -54,7 +54,10 @@ class KnowledgeBase(Base, TimestampMixin):
     """
 
     __tablename__ = "knowledge_bases"
-    __table_args__ = (UniqueConstraint("tenant_id", "name", name="uq_kb_tenant_name"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "name", name="uq_kb_tenant_name"),
+        UniqueConstraint("id", "tenant_id", name="uq_knowledge_bases_id_tenant"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     tenant_id: Mapped[str] = mapped_column(
@@ -75,4 +78,8 @@ class KnowledgeBase(Base, TimestampMixin):
 
     # ── 关系定义 ──
     tenant = relationship("Tenant")
-    documents = relationship("Document", back_populates="knowledge_base")
+    documents = relationship(
+        "Document",
+        back_populates="knowledge_base",
+        foreign_keys="Document.knowledge_base_id",
+    )

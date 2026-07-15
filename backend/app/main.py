@@ -23,6 +23,7 @@ SupportForge 后端应用入口
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 # ── 导入路由 ──
 from .api.v1.router import api_router
@@ -108,6 +109,13 @@ app = FastAPI(
 # RequestLogMiddleware: 记录每个请求的 request_id、method、path、status、duration_ms
 # add_middleware 的参数是中间件类本身（不是实例），FastAPI 会自动创建实例
 app.add_middleware(RequestLogMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+)
 
 # ── 注册全局异常处理器 ──
 # register_exception_handlers 会把 AppException、HTTPException、Exception

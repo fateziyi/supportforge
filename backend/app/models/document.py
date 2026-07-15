@@ -43,7 +43,7 @@
 - "mime_type 有什么用？" → Week 3 解析时根据类型选择解析器
 """
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, ForeignKeyConstraint, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base, TimestampMixin
@@ -62,6 +62,13 @@ class Document(Base, TimestampMixin):
     """
 
     __tablename__ = "documents"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["knowledge_base_id", "tenant_id"],
+            ["knowledge_bases.id", "knowledge_bases.tenant_id"],
+            name="fk_documents_kb_tenant",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     tenant_id: Mapped[str] = mapped_column(
@@ -85,4 +92,8 @@ class Document(Base, TimestampMixin):
 
     # ── 关系定义 ──
     tenant = relationship("Tenant")
-    knowledge_base = relationship("KnowledgeBase", back_populates="documents")
+    knowledge_base = relationship(
+        "KnowledgeBase",
+        back_populates="documents",
+        foreign_keys=[knowledge_base_id],
+    )
