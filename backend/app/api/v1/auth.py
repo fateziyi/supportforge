@@ -17,10 +17,16 @@ Day 8 将登录请求交给认证服务，返回真实 Access JWT。
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...schemas.auth import LoginRequest, TokenResponse
+from ...models.user import User
+from ...schemas.auth import (
+    CurrentUserDetailResponse,
+    LoginRequest,
+    RefreshTokenRequest,
+    TokenResponse,
+)
 from ...schemas.common import ApiResponse
 from ...services.auth_service import AuthService
-from ..deps import get_db
+from ..deps import get_current_user, get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -46,5 +52,42 @@ async def login(
     token_response = await AuthService(db).authenticate(
         email=str(payload.email),
         password=payload.password,
+        tenant_slug=payload.tenant_slug,
     )
     return ApiResponse(data=token_response)
+
+
+@router.post("/refresh", response_model=ApiResponse[TokenResponse])
+async def refresh(
+    payload: RefreshTokenRequest, db: AsyncSession = Depends(get_db)
+) -> ApiResponse[TokenResponse]:
+    """用一次性 Refresh Token 轮换并签发新的 token 对。"""
+    return ApiResponse(data=await AuthService(db).refresh(payload.refresh_token))
+
+
+@router.get("/me", response_model=ApiResponse[CurrentUserDetailResponse])
+async def get_me(
+    current_user: User = Depends(get_current_user),
+) -> ApiResponse[CurrentUserDetailResponse]:
+    """返回已由 Access Token 和数据库共同验证的当前用户。"""
+    return ApiResponse(
+        data=CurrentUserDetailResponse(
+            id=current_user.id,
+            tenant_id=current_user.tenant_id,
+            username=current_user.username,
+            email=current_user.email,
+            role=current_user.role,
+            status=current_user.status,
+        )
+    )
+
+
+@router.post("/logout", response_model=ApiResponse[None])
+async def logout(
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> ApiResponse[None]:
+    """撤销当前用户当前租户的所有 Refresh Session。"""
+    await AuthService(db).logout(
+        user_id=current_user.id, tenant_id=current_user.tenant_id
+    )
+    return ApiResponse(data=None)

@@ -30,16 +30,34 @@ Week 2 阶段：get_current_user() 将实现 JWT 认证逻辑
 - "get_db 为什么用 yield 而不是 return？" → 确保请求结束后 session 被关闭
 """
 
-# ── 数据库会话依赖 ──
+from typing import Annotated
+
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..core.context import set_tenant_id, set_user_id
+from ..core.exceptions import UnauthorizedException
+from ..core.security import decode_access_token
+
 # 从 db/session.py 导入真实的 get_db 函数
 # 不在 deps.py 里重复创建 engine/sessionmaker，保持单一事实来源
 # 这样 db/session.py 是数据库基础设施的唯一定义处，deps.py 只做转发
 from ..db.session import (
     get_db,  # noqa: F401 — 路由层通过 Depends(get_db) 使用，不在本文件内直接调用
 )
+from ..models.user import User
+from ..repositories.user_repo import UserRepository
+
+_bearer_scheme = HTTPBearer(auto_error=False)
 
 
-async def get_current_user():
+async def get_current_user(
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)
+    ],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
     """
     获取当前登录用户（占位实现）
 
@@ -51,4 +69,14 @@ async def get_current_user():
 
     目前保留占位，确保导入时不会报错。
     """
-    raise NotImplementedError("Week 2 实现认证依赖 get_current_user")
+    if credentials is None:
+        raise UnauthorizedException()
+    payload = decode_access_token(credentials.credentials)
+    user = await UserRepository(db).get_active_by_id_and_tenant(
+        payload.sub, payload.tenant_id
+    )
+    if user is None:
+        raise UnauthorizedException()
+    set_user_id(user.id)
+    set_tenant_id(user.tenant_id)
+    return user

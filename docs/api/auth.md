@@ -16,6 +16,7 @@ POST /api/v1/auth/login
 |------|------|------|------|
 | email | string | 是 | 登录邮箱 |
 | password | string | 是 | 登录密码 |
+| tenant_slug | string | 否 | 租户登录路由标识；同邮箱跨租户时必须提供 |
 
 ### 请求示例
 
@@ -33,6 +34,7 @@ POST /api/v1/auth/login
 | access_token | string | 访问令牌 |
 | refresh_token | string | 刷新令牌 |
 | token_type | string | 固定为 `bearer` |
+| expires_in | number | Access Token 有效秒数 |
 | user | object | 当前用户信息 |
 
 ### `user` 结构
@@ -88,6 +90,8 @@ POST /api/v1/auth/refresh
 | refresh_token | string | 新刷新令牌 |
 | token_type | string | `bearer` |
 
+Refresh Token 每次使用都会轮换。旧 token、已登出 token、过期 token 或误传 Access Token 均返回 HTTP 401、业务码 `40100`。
+
 ---
 
 ## 3. 获取当前用户信息
@@ -107,6 +111,8 @@ GET /api/v1/auth/me
 | role | string | 角色 |
 | status | string | 状态 |
 
+请求必须携带 `Authorization: Bearer <access_token>`。服务端会同时校验 JWT、数据库用户状态和租户状态。
+
 ---
 
 ## 4. 退出登录
@@ -115,4 +121,6 @@ GET /api/v1/auth/me
 POST /api/v1/auth/logout
 ```
 
-不需要额外请求字段，服务端使 token 失效即可。
+不需要额外请求字段，但必须携带 `Authorization: Bearer <access_token>`。服务端撤销该用户在当前租户的全部 Refresh Token 会话。
+
+> 当前 Access Token 为短期无状态 JWT，logout 后已签发的 Access Token 最多仍可使用到自身过期时间；Refresh Token 会立即失效。

@@ -39,6 +39,7 @@ from ..models.user import User
 # 这些值与 api/v1/auth.py 的 mock 常量对齐
 DEFAULT_TENANT_ID = "default-tenant-id"
 DEFAULT_TENANT_NAME = "Acme Demo"
+DEFAULT_TENANT_SLUG = "acme-demo"
 DEFAULT_ADMIN_ID = "default-admin-id"
 DEFAULT_ADMIN_EMAIL = "admin@acme.com"
 DEFAULT_ADMIN_USERNAME = "admin"
@@ -65,12 +66,18 @@ async def create_default_tenant() -> str:
         existing = result.scalar_one_or_none()
 
         if existing:
+            if existing.slug != DEFAULT_TENANT_SLUG:
+                existing.slug = DEFAULT_TENANT_SLUG
+                await session.commit()
+                print(f"  ✅ Tenant '{DEFAULT_TENANT_NAME}' slug repaired.")
+                return "upgraded"
             print(f"  ⏭  Tenant '{DEFAULT_TENANT_NAME}' already exists, skipped.")
             return "skipped"
 
         tenant = Tenant(
             id=DEFAULT_TENANT_ID,
             name=DEFAULT_TENANT_NAME,
+            slug=DEFAULT_TENANT_SLUG,
             status="active",
         )
         session.add(tenant)

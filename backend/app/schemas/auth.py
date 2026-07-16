@@ -27,7 +27,7 @@ Week 2 会补充：
 - "为什么 LoginRequest 不包含 tenant_id？" → tenant_id 从 JWT token 推导，不需要前端传入
 """
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
@@ -46,6 +46,13 @@ class LoginRequest(BaseModel):
 
     email: EmailStr
     password: str
+    tenant_slug: str | None = Field(default=None, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+class RefreshTokenRequest(BaseModel):
+    """刷新 Access Token 时提交的 Refresh JWT。"""
+
+    refresh_token: str = Field(min_length=1)
 
 
 class CurrentUserResponse(BaseModel):
@@ -68,6 +75,13 @@ class CurrentUserResponse(BaseModel):
     tenant_id: str
     email: str
     role: str
+
+
+class CurrentUserDetailResponse(CurrentUserResponse):
+    """/auth/me 返回的数据库当前用户快照。"""
+
+    username: str
+    status: str
 
 
 class TokenResponse(BaseModel):

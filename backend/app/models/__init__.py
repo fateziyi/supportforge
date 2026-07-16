@@ -33,6 +33,7 @@ from .conversation import Conversation as Conversation
 from .conversation_message import ConversationMessage as ConversationMessage
 from .document import Document as Document
 from .knowledge_base import KnowledgeBase as KnowledgeBase
+from .refresh_token_session import RefreshTokenSession as RefreshTokenSession
 from .tenant import Tenant as Tenant
 from .ticket import Ticket as Ticket
 from .user import User as User

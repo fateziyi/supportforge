@@ -20,7 +20,7 @@
 - "生产环境和开发环境怎么区分？" → app_env 字段控制，.env 文件按环境切换
 """
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 仅用于本地开发，长度满足 HS256 对称密钥的最低推荐值；生产环境必须覆盖。
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     # access_token_expire_minutes: Access Token 有效期（分钟）
     access_token_expire_minutes: int = 30
     # refresh_token_expire_days: Refresh Token 有效期（天）
-    refresh_token_expire_days: int = 7
+    refresh_token_expire_days: int = Field(default=7, gt=0)
 
     # ── 数据库配置（Day 3 使用）──
     # database_url: PostgreSQL 异步连接字符串

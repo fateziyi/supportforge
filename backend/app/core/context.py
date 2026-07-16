@@ -103,6 +103,11 @@ def get_user_id() -> Optional[str]:
     return user_id_ctx.get()
 
 
+def set_user_id(user_id: Optional[str]) -> None:
+    """写入已认证用户 ID，供同一请求内的审计和租户业务读取。"""
+    user_id_ctx.set(user_id)
+
+
 def get_tenant_id() -> Optional[str]:
     """
     获取当前用户所属的租户 ID
@@ -113,6 +118,11 @@ def get_tenant_id() -> Optional[str]:
         Optional[str]: 当前租户 ID，可能为 None
     """
     return tenant_id_ctx.get()
+
+
+def set_tenant_id(tenant_id: Optional[str]) -> None:
+    """写入仅来自已认证用户的租户 ID，禁止用前端输入覆盖。"""
+    tenant_id_ctx.set(tenant_id)
 
 
 def clear_context() -> None:

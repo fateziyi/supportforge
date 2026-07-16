@@ -33,6 +33,7 @@ def test_login_and_error_response_are_stable(monkeypatch: pytest.MonkeyPatch) ->
         *,
         email: str,
         password: str,
+        tenant_slug: str | None = None,
     ) -> TokenResponse:
         if email != "admin@acme.com":
             raise UnauthorizedException("邮箱或密码错误")

@@ -52,6 +52,12 @@ class Tenant(Base, TimestampMixin):
         unique=True,
         nullable=False,
     )
+    slug: Mapped[str] = mapped_column(
+        String(80),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
     status: Mapped[str] = mapped_column(
         String(20),
         default="active",

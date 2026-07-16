@@ -46,6 +46,7 @@
 | 文件 | 内容 |
 |------|------|
 | [day8-auth-password-jwt-login.md](spec/day8-auth-password-jwt-login.md) | Day 8：Argon2 密码哈希、Access JWT 与真实登录闭环 |
+| [day9-refresh-token-current-user.md](spec/day9-refresh-token-current-user.md) | Day 9：Refresh Token 轮换、当前用户依赖与登录租户路由 |
 
 ---
 

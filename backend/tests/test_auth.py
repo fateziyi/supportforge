@@ -16,6 +16,19 @@ from app.core.security import (
 from app.services.auth_service import AuthService
 
 
+class FakeSession:
+    """认证服务单测使用的最小可控异步会话。"""
+
+    def add(self, item: object) -> None:
+        pass
+
+    async def flush(self) -> None:
+        pass
+
+    async def commit(self) -> None:
+        pass
+
+
 def test_argon2_password_hash_can_only_verify_correct_password() -> None:
     """密码不以明文保存，且错误密码不能通过校验。"""
     password_hash = hash_password("123456")
@@ -79,19 +92,21 @@ async def test_auth_service_returns_token_for_active_user(
         password_hash=hash_password("123456"),
     )
 
-    async def fake_get_by_email(self: object, email: str) -> object:
+    async def fake_get_by_email(
+        self: object, email: str, tenant_slug: str | None = None
+    ) -> object:
         return user if email == user.email else None
 
     monkeypatch.setattr(
         "app.services.auth_service.UserRepository.get_by_email_for_login",
         fake_get_by_email,
     )
-    response = await AuthService(session=None).authenticate(
+    response = await AuthService(session=FakeSession()).authenticate(
         email=user.email,
         password="123456",
     )
 
-    assert response.refresh_token == ""
+    assert response.refresh_token
     assert decode_access_token(response.access_token).tenant_id == "tenant-1"
 
 
@@ -110,7 +125,9 @@ async def test_auth_service_rejects_unknown_email_bad_password_and_disabled_user
     )
     disabled_user = SimpleNamespace(**{**active_user.__dict__, "status": "disabled"})
 
-    async def active_lookup(self: object, email: str) -> object:
+    async def active_lookup(
+        self: object, email: str, tenant_slug: str | None = None
+    ) -> object:
         return active_user if email == active_user.email else None
 
     monkeypatch.setattr(
@@ -118,17 +135,19 @@ async def test_auth_service_rejects_unknown_email_bad_password_and_disabled_user
         active_lookup,
     )
     with pytest.raises(UnauthorizedException, match="邮箱或密码错误"):
-        await AuthService(session=None).authenticate(
+        await AuthService(session=FakeSession()).authenticate(
             email="unknown@example.com",
             password="bad",
         )
     with pytest.raises(UnauthorizedException, match="邮箱或密码错误"):
-        await AuthService(session=None).authenticate(
+        await AuthService(session=FakeSession()).authenticate(
             email=active_user.email,
             password="bad",
         )
 
-    async def disabled_lookup(self: object, email: str) -> object:
+    async def disabled_lookup(
+        self: object, email: str, tenant_slug: str | None = None
+    ) -> object:
         return disabled_user
 
     monkeypatch.setattr(
@@ -136,7 +155,7 @@ async def test_auth_service_rejects_unknown_email_bad_password_and_disabled_user
         disabled_lookup,
     )
     with pytest.raises(ForbiddenException, match="用户已被禁用"):
-        await AuthService(session=None).authenticate(
+        await AuthService(session=FakeSession()).authenticate(
             email=disabled_user.email,
             password="123456",
         )

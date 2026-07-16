@@ -1,6 +1,7 @@
 """认证安全工具：负责密码哈希与 Access JWT 的签发、校验。"""
 
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import jwt
 from argon2 import PasswordHasher
@@ -22,6 +23,12 @@ class AccessTokenPayload(BaseModel):
     token_type: str
     iat: datetime
     exp: datetime
+
+
+class RefreshTokenPayload(AccessTokenPayload):
+    """Refresh Token 载荷，jti 与服务端可撤销会话一一对应。"""
+
+    jti: str
 
 
 def hash_password(password: str) -> str:
@@ -81,6 +88,42 @@ def decode_access_token(token: str) -> AccessTokenPayload:
         )
         token_payload = AccessTokenPayload.model_validate(payload)
         if token_payload.token_type != "access":
+            raise ValueError("unexpected token type")
+        return token_payload
+    except (jwt.PyJWTError, ValidationError, ValueError) as exc:
+        raise UnauthorizedException() from exc
+
+
+def create_refresh_token(
+    *, user_id: str, tenant_id: str, role: str, jti: str | None = None
+) -> tuple[str, RefreshTokenPayload]:
+    """签发 Refresh JWT；调用方必须把返回 jti 对应的会话写入数据库。"""
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(days=settings.refresh_token_expire_days)
+    token_jti = jti or str(uuid4())
+    payload = {
+        "sub": user_id,
+        "tenant_id": tenant_id,
+        "role": role,
+        "token_type": "refresh",
+        "jti": token_jti,
+        "iat": now,
+        "exp": expires_at,
+    }
+    token = jwt.encode(
+        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+    )
+    return token, RefreshTokenPayload.model_validate(payload)
+
+
+def decode_refresh_token(token: str) -> RefreshTokenPayload:
+    """验证 Refresh JWT 的签名、过期时间、必需 claims 和 token 类型。"""
+    try:
+        payload = jwt.decode(
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
+        )
+        token_payload = RefreshTokenPayload.model_validate(payload)
+        if token_payload.token_type != "refresh":
             raise ValueError("unexpected token type")
         return token_payload
     except (jwt.PyJWTError, ValidationError, ValueError) as exc:
