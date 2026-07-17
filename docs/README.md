@@ -10,6 +10,8 @@
 |------|------|
 | [项目需求清单.md](requirements/项目需求清单.md) | 必须补齐清单、建议补齐、可选加分项、优先 8 件事、面试视角 |
 | [开发里程碑.md](requirements/开发里程碑.md) | 6 周开发计划、交付物、每周检查标准 |
+| [week1-daily-tasks.md](requirements/week1-daily-tasks.md) | Week 1：项目骨架与基础设施每日任务及完成记录 |
+| [week2-daily-tasks.md](requirements/week2-daily-tasks.md) | Week 2：认证、多租户隔离与 RBAC 每日任务拆分 |
 | [里程碑与目录对应.md](requirements/里程碑与目录对应.md) | 每周里程碑对应的目录/文件、重点目录、按域开发策略 |
 | [示例测试数据.md](requirements/示例测试数据.md) | Demo 初始化数据（租户、用户、知识库、文档、对话、工单、审计日志） |
 
@@ -47,6 +49,7 @@
 |------|------|
 | [day8-auth-password-jwt-login.md](spec/day8-auth-password-jwt-login.md) | Day 8：Argon2 密码哈希、Access JWT 与真实登录闭环 |
 | [day9-refresh-token-current-user.md](spec/day9-refresh-token-current-user.md) | Day 9：Refresh Token 轮换、当前用户依赖与登录租户路由 |
+| [day10-tenant-scope-isolation.md](spec/day10-tenant-scope-isolation.md) | Day 10：Tenant Scope 基础设施与多租户逻辑隔离 |
 
 ---
 

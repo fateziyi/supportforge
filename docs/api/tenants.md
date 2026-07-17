@@ -2,6 +2,35 @@
 
 > 基础路径：`/api/v1/tenants`
 
+> 当前已实现仅限“读取当前认证用户所属租户”；创建、列表、更新等平台级管理接口与 RBAC 权限矩阵留待 Day 12+。
+
+---
+
+## 当前租户（已实现）
+
+```
+GET /api/v1/tenants/current
+```
+
+请求头：`Authorization: Bearer <access_token>`。
+
+接口不接收 `tenant_id`；服务端只依据已认证用户的 token 与数据库记录确定租户。
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id": "default-tenant-id",
+    "name": "Acme Demo",
+    "slug": "acme-demo",
+    "status": "active"
+  }
+}
+```
+
+缺失、过期或错误类型的 token 返回 HTTP 401 与业务码 `40100`。
+
 ---
 
 ## 1. 创建租户

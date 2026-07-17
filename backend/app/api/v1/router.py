@@ -31,6 +31,7 @@ from fastapi import APIRouter
 # 导入各模块的路由
 from .auth import router as auth_router
 from .health import router as health_router
+from .tenants import router as tenants_router
 
 # 创建聚合路由实例
 # 注意：这里不加 prefix，因为 prefix 在 main.py 中统一设置
@@ -45,6 +46,9 @@ api_router.include_router(health_router, tags=["health"])
 # 认证模块 — Day 6 已实现 mock 登录骨架
 # auth_router 自带 prefix="/auth"，所以最终路径是 /api/v1/auth/login
 api_router.include_router(auth_router)
+
+# 当前租户模块 — Day 10 的多租户逻辑隔离最小闭环
+api_router.include_router(tenants_router)
 
 # ─── 后续模块挂载位置（Week 2 开始逐步添加）───
 

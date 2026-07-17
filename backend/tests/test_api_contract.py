@@ -1,11 +1,14 @@
 """API 统一响应契约回归测试。"""
 
 import pytest
-from app.api.deps import get_db
+from app.api.deps import get_current_user, get_db
 from app.core.exceptions import UnauthorizedException
 from app.main import app
+from app.models.tenant import Tenant
+from app.models.user import User
 from app.schemas.auth import CurrentUserResponse, TokenResponse
 from app.services.auth_service import AuthService
+from app.services.tenant_service import TenantService
 from fastapi.testclient import TestClient
 
 
@@ -83,3 +86,48 @@ def test_validation_error_without_json_content_type_uses_422_envelope() -> None:
     assert response.status_code == 422
     assert response.json()["code"] == 42200
     assert response.json()["data"] is not None
+
+
+def test_current_tenant_uses_authenticated_user_scope(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """任何 query 参数都不能覆盖由认证用户确定的当前租户。"""
+
+    async def override_db():
+        yield object()
+
+    authenticated_user = User(
+        id="user-a",
+        tenant_id="tenant-a",
+        username="agent",
+        email="agent@acme.com",
+        password_hash="not-used",
+        role="tenant_admin",
+        status="active",
+    )
+
+    async def override_current_user() -> User:
+        return authenticated_user
+
+    async def fake_get_current_tenant(
+        self: TenantService, current_user: User
+    ) -> Tenant:
+        assert current_user.tenant_id == "tenant-a"
+        return Tenant(
+            id="tenant-a",
+            name="Tenant A",
+            slug="tenant-a",
+            status="active",
+        )
+
+    monkeypatch.setattr(TenantService, "get_current_tenant", fake_get_current_tenant)
+    app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_current_user] = override_current_user
+    try:
+        with TestClient(app) as client:
+            response = client.get("/api/v1/tenants/current?tenant_id=tenant-b")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["data"]["id"] == "tenant-a"
