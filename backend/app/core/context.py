@@ -35,7 +35,8 @@
 """
 
 import uuid
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
+from dataclasses import dataclass
 from typing import Optional
 
 # ── 定义三个上下文变量 ──
@@ -53,6 +54,15 @@ user_id_ctx: ContextVar[Optional[str]] = ContextVar("user_id", default=None)
 # Week 2 实现 JWT 后，从 token 中解析并注入
 # ⚠️ 重要：tenant_id 只从 JWT 解析，不信任前端传参（CLAUDE.md 规则）
 tenant_id_ctx: ContextVar[Optional[str]] = ContextVar("tenant_id", default=None)
+
+
+@dataclass(frozen=True)
+class ContextTokens:
+    """保存一次请求初始化时产生的 token，用于精确恢复原上下文。"""
+
+    request_id: Token
+    user_id: Token
+    tenant_id: Token
 
 
 # ── 便捷函数 ──
@@ -77,6 +87,48 @@ def set_request_id(request_id: Optional[str] = None) -> str:
         request_id = str(uuid.uuid4())
     request_id_ctx.set(request_id)
     return request_id
+
+
+def initialize_context(
+    request_id: Optional[str] = None,
+) -> tuple[str, ContextTokens]:
+    """
+    初始化一次请求的上下文，并保存进入请求前的状态。
+
+    请求开始时先写入新的 request_id，同时把 user_id、tenant_id 置为未认证状态。
+    返回的 token 必须在同一异步上下文中交给 reset_context()，以便在请求结束后
+    恢复进入请求之前的值，而不是简单覆盖成 None。
+
+    Args:
+        request_id: 可选请求 ID；未提供时自动生成 UUID。
+
+    Returns:
+        tuple[str, ContextTokens]: 实际 request_id 与成对恢复所需的 token。
+    """
+    if request_id is None:
+        request_id = str(uuid.uuid4())
+
+    tokens = ContextTokens(
+        request_id=request_id_ctx.set(request_id),
+        user_id=user_id_ctx.set(None),
+        tenant_id=tenant_id_ctx.set(None),
+    )
+    return request_id, tokens
+
+
+def reset_context(tokens: ContextTokens) -> None:
+    """
+    恢复 initialize_context() 执行前的上下文状态。
+
+    token 必须和 ContextVar 一一对应，并在创建 token 的同一异步上下文中使用。
+    按写入的相反顺序恢复，便于未来扩展嵌套上下文字段时保持清晰的栈语义。
+
+    Args:
+        tokens: initialize_context() 返回的请求上下文 token 集合。
+    """
+    tenant_id_ctx.reset(tokens.tenant_id)
+    user_id_ctx.reset(tokens.user_id)
+    request_id_ctx.reset(tokens.request_id)
 
 
 def get_request_id() -> Optional[str]:
@@ -127,15 +179,15 @@ def set_tenant_id(tenant_id: Optional[str]) -> None:
 
 def clear_context() -> None:
     """
-    清理所有上下文变量
+    强制清空所有上下文变量。
 
-    在请求结束时调用，防止上下文数据在下一个请求中被误读。
-    通常在 RequestLogMiddleware 的 finally 块中调用。
+    该函数用于测试隔离或非请求场景的显式清理。HTTP 请求生命周期必须使用
+    initialize_context() 与 reset_context() 成对管理，才能恢复嵌套调用前的值。
 
-    为什么需要清理？
-    - ContextVar 的值会在请求结束后"残留"
-    - 如果不清理，下一个请求可能读到上一个请求的数据
-    - 这在多租户场景下尤其危险：可能导致跨租户数据泄露
+    为什么仍保留这个函数？
+    - 单元测试可以在开始和结束时建立明确的空上下文
+    - 命令行脚本等没有请求 token 的场景仍可显式清空
+    - 兼容现有调用方，避免把强制清空和请求状态恢复混为一谈
     """
     request_id_ctx.set(None)
     user_id_ctx.set(None)

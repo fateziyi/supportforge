@@ -25,7 +25,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from .context import clear_context, set_request_id
+from .context import initialize_context, reset_context
 
 # ── 日志初始化 ──
 
@@ -92,12 +92,12 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
 
     中间件执行流程：
     RequestLogMiddleware.dispatch()
-      1. set_request_id() → 生成 request_id
+      1. initialize_context() → 生成 request_id 并保存原上下文 token
       2. 记录开始时间
       3. call_next(request) → 调用下游处理（路由、业务逻辑等）
       4. 计算耗时
       5. 打印日志
-      6. clear_context() → 清理上下文（在 finally 中，确保一定执行）
+      6. reset_context() → 在 finally 中恢复进入请求前的上下文
     """
 
     async def dispatch(self, request: Request, call_next) -> Response:
@@ -118,60 +118,46 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
         # 获取日志实例
         logger = logging.getLogger("app")
 
-        # 1. 生成 request_id 并写入上下文
-        rid = set_request_id()
+        # 1. 初始化请求上下文，并保留进入请求前的状态
+        # 请求结束后使用 token 精确恢复，支持测试和嵌套上下文场景
+        rid, context_tokens = initialize_context()
 
         # 2. 记录请求开始时间
-        # time.time() 返回当前时间的浮点数（秒级精度）
-        start_time = time.time()
+        # perf_counter() 是单调时钟，不受系统时间校准影响，更适合计算耗时
+        start_time = time.perf_counter()
+
+        # response 在异常路径上保持为 None，日志状态码按 500 记录
+        response: Response | None = None
 
         # 3. 调用下游处理器，获取响应
         # call_next 是 Starlette/FastAPI 提供的函数，
         # 它会把请求传递给下一个中间件和最终的路由处理器
-        # 如果下游抛出异常，call_next 会返回一个 500 响应
+        # 未知异常继续向上抛出，交给全局异常处理器统一生成安全的 500 响应
         try:
             response = await call_next(request)
+            return response
         except Exception:
-            # 下游处理器抛出了异常
-            # 这种情况下 response 无法正常获取，构造一个 500 状态码
-            logger.error(
+            logger.exception(
                 f"request_id={rid} "
                 f"method={request.method} "
                 f"path={request.url.path} "
                 f"status=500 "
                 f"error=unhandled_exception"
             )
-            # 仍然返回一个默认的 500 响应
-            from starlette.responses import JSONResponse
+            raise
+        finally:
+            # 4. 无论请求成功还是抛出异常，都计算并记录本次请求耗时
+            duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            status_code = response.status_code if response is not None else 500
 
-            response = JSONResponse(
-                status_code=500,
-                content={
-                    "code": 50000,
-                    "message": "Internal Server Error",
-                    "data": None,
-                },
+            # 5. 日志中包含请求方法、路径、状态码和耗时，便于问题排查
+            logger.info(
+                f"request_id={rid} "
+                f"method={request.method} "
+                f"path={request.url.path} "
+                f"status={status_code} "
+                f"duration_ms={duration_ms}"
             )
 
-        # 4. 计算请求耗时
-        # duration_ms 单位是毫秒，乘以 1000 将秒转为毫秒
-        # round(xxx, 2) 保留两位小数，避免精度过长
-        duration_ms = round((time.time() - start_time) * 1000, 2)
-
-        # 5. 打印请求日志
-        # 日志中包含：request_id、请求方法、路径、状态码、耗时
-        # 这些信息足够用于问题排查和性能监控
-        logger.info(
-            f"request_id={rid} "
-            f"method={request.method} "
-            f"path={request.url.path} "
-            f"status={response.status_code} "
-            f"duration_ms={duration_ms}"
-        )
-
-        # 6. 清理上下文变量（放在 finally 中确保一定执行）
-        # 如果不清理，下一个请求可能读到当前请求的 request_id
-        # 这在日志排查时会造成混乱
-        clear_context()
-
-        return response
+            # 6. 恢复进入请求前的上下文，而不是简单覆盖成 None
+            reset_context(context_tokens)
